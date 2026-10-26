@@ -56,7 +56,7 @@ Create a server-side FACEIT Data API key at https://developers.faceit.com/ (see 
 4. Put the webhook signing secret in `STRIPE_WEBHOOK_SECRET`.
 5. Use Stripe's local webhook forwarding during testing.
 6. Set up automatic or documented manual refund handling for `needs_refund` payment records before live operation.
-7. Publish tournament rules, privacy policy, eligibility, cancellation/refund and prize-distribution terms **before checkout is enabled**.
+8. Publish tournament rules, privacy policy, eligibility, cancellation/refund and prize-distribution terms **before checkout is enabled**.
 
 **Payment confirmation occurs only after verified Stripe webhooks.** Returning to the success page never marks a player paid.
 
@@ -85,7 +85,7 @@ Set all environment variables in Vercel's server-side settings. Set `NEXT_PUBLIC
 - Tournament capacity should be a **multiple of five** (50 or 60; not 64 for pure five-person teams).
 - The model is **provisional**; it does not currently adjust K/D for opponent strength, ingest Leetify or demo-level data, or establish reliable role impact. Never present its result as an objective AI decision.
 - An administrator can override suggestions and must document the reason.
-- Team-generation algorithm is deterministic for a given sorted input, with skill and role penalties. It can be extended to randomize between near-equivalent solutions after comprehensive testing.
+- Team-generation algorithm randomizes candidates within similar skill bands and optimizes skill/role balance; the exact previewed roster is submitted for database publication. It can be extended to randomize between near-equivalent solutions after comprehensive testing.
 - `needs_refund` flags require immediate operator intervention. They are not automatically refunded by this version.
 - Do not paste credentials into ChatGPT or commit them to GitHub.
 
