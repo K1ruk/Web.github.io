@@ -26,7 +26,7 @@ export async function verifyOpenId(callback:URL){
  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),8000);
  try{const response=await fetch('https://steamcommunity.com/openid/login',{method:'POST',body:data,headers:{'Content-Type':'application/x-www-form-urlencoded'},cache:'no-store',signal:controller.signal});
  if(!response.ok)throw new Error('Steam identity verification failed');
- const body=await response.text();if(!/(^|\n)is_valid:true(\n|$)/.test(body))throw new Error('Steam signature rejected');
+ const body=(await response.text()).replace(/\r/g,'');if(!/(^|\n)is_valid:true(\n|$)/.test(body)throw new Error('Steam signature rejected');
  return match[1];
  }finally{clearTimeout(timeout);}
 }
