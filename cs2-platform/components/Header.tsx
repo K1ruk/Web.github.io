@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';import {usePathname} from 'next/navigation';import {useLocale} from './LocaleProvider';
-const links=[['/','HOME','НҮҮР'],['/players','PLAYERS','ТОГЛОГЧИД'],['/teams','TEAMS','БАГУУД'],['/register','REGISTER','БҮРТГЭЛ'],['/dashboard','MY ACCOUNT','МИНИЙ ХАЯГ']];
+const links=[['/','HOME','НҮҮР'],['/players','PLAYERS','ТОГЛОГЧИД'],['/teams','TEAMS','БАГУУД'],['/schedule','SCHEDULE','ХУВААРЬ'],['/register','REGISTER','БҮРТГЭЛ'],['/dashboard','MY ACCOUNT','МИНИЙ ХАЯГ']];
 export function Header(){const {locale,setLocale}=useLocale();const path=usePathname();
  return <header className="site-header"><Link className="logo" href="/" aria-label="Nexus home"><span className="brand-symbol">✳</span> NEXUS<span className="brand-period">.</span></Link>
  <nav className="main-nav" aria-label="Main menu">{links.map(([href,en,mn])=><Link href={href} key={href} className={path===href?'nav-current':''}>{locale==='en'?en:mn}</Link>)}</nav>
