@@ -34,7 +34,7 @@ export default function Login() {
       const { error } = await db.auth.signInWithOAuth({
         provider: 'discord',
         options: {
-          redirectTo: `${location.origin}/auth/callback?next=/dashboard`,
+          redirectTo: `${location.origin}/auth/callback`,
           scopes: 'identify email',
         },
       });
@@ -57,7 +57,7 @@ export default function Login() {
       const { error } = await db.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${location.origin}/auth/callback?next=/dashboard`,
+          emailRedirectTo: `${location.origin}/auth/callback`,
         },
       });
       setMessage(
