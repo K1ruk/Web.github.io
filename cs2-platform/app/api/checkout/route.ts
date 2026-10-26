@@ -11,6 +11,7 @@ export async function POST(req:NextRequest){
  const user=await requireUser();if(!user)return jsonError('Sign in required',401);
  const parsed=schema.safeParse(await req.json().catch(()=>null));if(!parsed.success)return jsonError('You must accept the rules and select an event');
  const secret=process.env.STRIPE_SECRET_KEY;if(!secret)return jsonError('Payments are not configured',503);
+ if(secret.startsWith('sk_live_')&&(process.env.ALLOW_LIVE_PAYMENTS!=='true'||!process.env.NEXT_PUBLIC_TOURNAMENT_RULES_URL||!process.env.NEXT_PUBLIC_REFUND_POLICY_URL))return jsonError('Live checkout is disabled until approved terms and payment settings are published',503);
  const db=adminDb(),stripe=new Stripe(secret);const tournamentId=parsed.data.tournamentId;
  const {data:t,error:tErr}=await db.from('tournaments').select('id,name,fee_cents,currency,status').eq('id',tournamentId).single();
  if(tErr||!t||t.status!=='open'||t.fee_cents<=0)return jsonError('Tournament is not open for checkout',409);
