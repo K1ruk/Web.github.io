@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 export type SkillPlayer={registration_id:string;score:number;primary_role:string;secondary_role:string};
 export type RosterMember={registration_id:string;assigned_role:string};
 const ROLES=['IGL','AWPer','Entry Fragger','Support','Lurker','Rifler'];
@@ -12,7 +13,7 @@ export function buildBalancedTeams(players:SkillPlayer[]):RosterMember[][]{
  if(new Set(players.map(p=>p.registration_id)).size!==players.length)throw new Error('Duplicate registration');
  const n=players.length/5;
  // Strong players distributed with a serpentine draft; local search balances skill and roles.
- const initial=[...players].sort((a,b)=>b.score-a.score);
+ const initial=players.map(p=>({p,random:randomInt(0x7fffffff)})).sort((a,b)=>Math.floor(b.p.score/8)-Math.floor(a.p.score/8)||a.random-b.random).map(x=>x.p);
  const squads:SkillPlayer[][]=Array.from({length:n},()=>[]);
  initial.forEach((p,i)=>{const row=Math.floor(i/n);const idx=row%2===0?i%n:n-1-i%n;squads[idx].push(p);});
  const mean=players.reduce((sum,p)=>sum+p.score,0)/n;
