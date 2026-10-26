@@ -20,5 +20,5 @@ export async function analyzeSteam(steamId:string){
  const kdValues=(result?.items||[]).map(i=>Number(i.stats?.['K/D Ratio'])).filter(n=>Number.isFinite(n)&&n>0&&n<15);
  const kd=kdValues.length?kdValues.reduce((a,b)=>a+b,0)/kdValues.length:null;
  const suggested=provisionalSkill(elo,kd,kdValues.length);
- return {found:true as const,playerId:player.player_id,nickname:player.nickname,elo,recentKd:kd,matches:kdValues.length,...suggested};
+ return {found:true as const,playerId:player.player_id,nickname:player.nickname,...suggested};
 }
