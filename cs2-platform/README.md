@@ -34,7 +34,7 @@ Open http://localhost:3000.
 1. Create a project at https://supabase.com .
 2. Copy the Project URL and publishable key into `NEXT_PUBLIC_SUPABASE_*` environment variables.
 3. Copy the Supabase server **secret key** to `SUPABASE_SECRET_KEY` (server only; never expose it or use NEXT_PUBLIC).
-4. In Supabase SQL Editor run the migrations in order: `001_init.sql`, `002_hardening.sql`, then `003_rules_and_limits.sql`, then `004_match_format.sql`.
+4. In Supabase SQL Editor run the migrations in order: `001_init.sql`, `002_hardening.sql`, then `003_rules_and_limits.sql`, then `004_match_format.sql`, then `005_restrict_internal_triggers.sql`.
 5. Enable email magic-link / OTP authentication. Set the Site URL to the exact `NEXT_PUBLIC_SITE_URL` and allow redirect `https://YOUR-DOMAIN/auth/callback` (and the equivalent local URL for development).
 6. Sign in yourself once, then run **in the SQL editor** (replace the value with your actual Supabase Auth user UUID):
 ```sql
