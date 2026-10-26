@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {requireUser,isAdmin} from '@/lib/auth';
 import {adminDb} from '@/lib/supabase/admin';
 import {jsonError,sameOrigin} from '@/lib/security';
-const newTournament=z.object({name:z.string().trim().min(3).max(100),slug:z.string().regex(/^[a-z0-9-]{3,60}$/),feeCents:z.number().int().min(100).max(1000000),currency:z.enum(['eur','sek','usd']),capacity:z.number().int().min(5).max(1000).refine(v=>v%5===0)});
+const newTournament=z.object({name:z.string().trim().min(3).max(100),slug:z.string().regex(/^[a-z0-9-]{3,60}$/),feeCents:z.number().int().min(100).max(1000000),currency:z.enum(['eur','sek','usd']),capacity:z.number().int().min(5).max(200).refine(v=>v%5===0)});
 const statusUpdate=z.object({tournamentId:z.string().uuid(),status:z.enum(['open','locked'])});
 export async function POST(req:NextRequest){
  if(!sameOrigin(req))return jsonError('Origin not allowed',403);
