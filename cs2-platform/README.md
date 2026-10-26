@@ -97,3 +97,5 @@ lib/                 Steam, FACEIT, skill and team logic
 supabase/migrations/ Database schema + security
 tests/               Skill/team algorithm unit tests
 ```
+
+**Release gate:** keep this pull request as draft until CI passes, provider test-mode flows work, all four migrations have been applied, and an independent security review is complete.
