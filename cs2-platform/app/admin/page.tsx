@@ -7,5 +7,5 @@ export default async function Admin(){
  const {data:registrations}=await db.from('registrations').select('id,tournament_id,user_id,status,assigned_tier,internal_score,primary_role,secondary_role').order('created_at',{ascending:false}).limit(1000);
  const ids=[...new Set((registrations||[]).map(r=>r.user_id))];
  const {data:profiles}=ids.length?await db.from('profiles').select('user_id,nickname').in('user_id',ids):{data:[]};
- return <AdminClient tournaments={tournaments||[]} registrations={(registrations||[]).map(r=>({...r,nickname:profiles?.find(p=>p.user_id===r.user_id)?.nickname||'Player'}))}/>;
+ const [{data:teams},{data:matches}]=await Promise.all([db.from('teams').select('id,name,tournament_id').order('name').limit(300),db.from('matches').select('id,tournament_id,team_a,team_b,stage,status,best_of,scheduled_at,score_a,score_b').order('scheduled_at',{ascending:true}).limit(300)]);\n return <AdminClient teams={teams||[]} matches={matches||[]} tournaments={tournaments||[]} registrations={(registrations||[]).map(r=>({...r,nickname:profiles?.find(p=>p.user_id===r.user_id)?.nickname||'Player'}))}/>;
 }
