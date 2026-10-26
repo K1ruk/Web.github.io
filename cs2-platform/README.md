@@ -6,7 +6,7 @@ The visual style follows the black editorial references: oversized typography, r
 
 ## Current implementation
 - English / Mongolian Cyrillic interface toggle saved locally.
-- Email magic-link sign-in with Supabase SSR sessions.
+- Primary Discord OAuth sign-in with Supabase SSR sessions; optional email magic-link fallback.
 - Authenticated player profiles with two different CS2 positions.
 - Steam OpenID account linking verified by a Steam server-side signature check.
 - Admin Steam URL analyzer (direct SteamID64 or vanity URL with an optional Steam Web API key), plus FACEIT lookup using **exact Elo** and available recent K/D; explicitly provisional 0–100 skill model and admin-controlled Tier 1–5 approval.
@@ -35,13 +35,28 @@ Open http://localhost:3000.
 2. Copy the Project URL and publishable key into `NEXT_PUBLIC_SUPABASE_*` environment variables.
 3. Copy the Supabase server **secret key** to `SUPABASE_SECRET_KEY` (server only; never expose it or use NEXT_PUBLIC).
 4. In Supabase SQL Editor run the migrations in order: `001_init.sql`, `002_hardening.sql`, then `003_rules_and_limits.sql`, then `004_match_format.sql`, then `005_restrict_internal_triggers.sql`.
-5. Enable email magic-link / OTP authentication. Set the Site URL to the exact `NEXT_PUBLIC_SITE_URL` and allow redirect `https://YOUR-DOMAIN/auth/callback` (and the equivalent local URL for development).
+5. Configure Discord OAuth (see below) as primary sign-in. Email OTP remains an optional fallback, subject to the Supabase project's email provider limits. Set Supabase Auth **Site URL** to your deployed website, and allow both localhost and preview callback URLs.
 6. Sign in yourself once, then run **in the SQL editor** (replace the value with your actual Supabase Auth user UUID):
 ```sql
 insert into public.admin_users(user_id)
 values ('YOUR_AUTH_USER_UUID');
 ```
 Never accept a client-submitted `admin=true` flag. Admin access is assigned manually in the database.
+
+## Set up Discord sign-in (no email service or domain required)
+
+1. Open https://discord.com/developers/applications and create an app named `NEXUS`. Discord application creation is performed by the owner.
+2. Under **OAuth2**, add this redirect URL, then save:
+   `https://soyvzdmzfbfqwydtkrlc.supabase.co/auth/v1/callback`
+   This is the **Supabase callback**, not the app's `/auth/callback` route. For other Supabase projects, obtain their callback from Authentication > Providers > Discord.
+3. Copy Discord's Client ID and Client Secret. In the Supabase dashboard, open **Authentication > Sign In / Providers > Discord**, turn it on, and paste both values there. **Never put the Discord Client Secret in `.env.local`, GitHub, Vercel public variables, or chat.**
+4. In Supabase **Authentication > URL Configuration > Redirect URLs**, add both:
+   - `http://localhost:3000/auth/callback`
+   - `https://nexus-cs2-arena-git-feat-cs2-secure-platform-k1ruk.vercel.app/auth/callback`
+5. In `cs2-platform/.env.local`, set `NEXT_PUBLIC_SITE_URL=http://localhost:3000` and ensure the Supabase URL and public publishable key exist. Run `npm run dev`, then press **Continue with Discord** on `/login`.
+6. Discord signs in the person; it does **not** replace the separate Steam OpenID verification requirement for entering tournaments. The dashboard still requires `SUPABASE_SECRET_KEY` server-side.
+
+OAuth does not require Resend SMTP, a custom email-sending domain, a Discord server, or a Discord bot. Do not request unnecessary Discord permissions such as bot access or guild membership. Keep the existing magic-link fallback until an alternate account-recovery policy is designed.
 
 ## Set up FACEIT
 Create a server-side FACEIT Data API key at https://developers.faceit.com/ (see their Data API documentation). Store in `FACEIT_API_KEY` on the server. Rankings will be unavailable without this key, but admins can manually approve a tier and score.
