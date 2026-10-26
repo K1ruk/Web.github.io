@@ -9,7 +9,8 @@ export async function POST(req:NextRequest){
  if(!sameOrigin(req))return jsonError('Origin not allowed',403);
  const user=await requireUser();if(!user)return jsonError('Sign in required',401);
  const raw=await req.json().catch(()=>null),parsed=schema.safeParse(raw);if(!parsed.success)return jsonError('Invalid profile data');
- const db=adminDb();\n const {error}=await db.from('profiles').upsert({user_id:user.id,...parsed.data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+ const db=adminDb();
+ const {error}=await db.from('profiles').upsert({user_id:user.id,...parsed.data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
  if(error)return jsonError('Unable to save profile',500);
  return NextResponse.json({ok:true});
 }
