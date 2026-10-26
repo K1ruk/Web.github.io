@@ -14,7 +14,7 @@ The visual style follows the black editorial references: oversized typography, r
 - Server-side checkout using real tournament fee/currency, Stripe-hosted payment and verified, idempotent webhooks.
 - Database migrations with Row Level Security (RLS), minimum client grants, payment/audit records and atomic roster publication.
 - Public players/teams visible only after publication; authenticated dashboard.
-- Basic upcoming-match data model and read-only schedule page.
+- Admin match scheduling and verified BO1/BO3 result entry, plus public read-only schedule page.
 - Algorithmic role-aware skill balancing with tests.
 
 **This is an implementation foundation, not a security-certified production service.** No test payment or real Steam/FACEIT account has been executed. Do not enable live payments until the deployment checklist and end-to-end security tests are completed.
@@ -34,7 +34,7 @@ Open http://localhost:3000.
 1. Create a project at https://supabase.com .
 2. Copy the Project URL and publishable key into `NEXT_PUBLIC_SUPABASE_*` environment variables.
 3. Copy the Supabase server **secret key** to `SUPABASE_SECRET_KEY` (server only; never expose it or use NEXT_PUBLIC).
-4. In Supabase SQL Editor run the migrations in order: `001_init.sql`, `002_hardening.sql`, then `003_rules_and_limits.sql`.
+4. In Supabase SQL Editor run the migrations in order: `001_init.sql`, `002_hardening.sql`, then `003_rules_and_limits.sql`, then `004_match_format.sql`.
 5. Enable email magic-link / OTP authentication. Set the Site URL to the exact `NEXT_PUBLIC_SITE_URL` and allow redirect `https://YOUR-DOMAIN/auth/callback` (and the equivalent local URL for development).
 6. Sign in yourself once, then run **in the SQL editor** (replace the value with your actual Supabase Auth user UUID):
 ```sql
@@ -77,7 +77,7 @@ Set all environment variables in Vercel's server-side settings. Set `NEXT_PUBLIC
 - [ ] Run `npm run build`, `npm run lint`, `npm test`, and end-to-end tests on a staging deployment. **The build could not be run in this session because npm registry access is unavailable.**
 - [ ] Perform a security review before replacing `sk_test_` with a live key.
 - [ ] Remove the preview-only robots noindex setting once approved for publication.
-- [ ] Create a match scheduling and results admin flow before operating the actual tournament.
+- [ ] Conduct manual end-to-end testing of the match scheduling and results admin flow with real team rosters.
 
 ## Data notes
 - Only paid registrations may be graded and assigned teams.
