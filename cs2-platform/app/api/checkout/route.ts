@@ -14,7 +14,7 @@ export async function POST(req:NextRequest){
  const db=adminDb(),stripe=new Stripe(secret);const tournamentId=parsed.data.tournamentId;
  const {data:t,error:tErr}=await db.from('tournaments').select('id,name,fee_cents,currency,status').eq('id',tournamentId).single();
  if(tErr||!t||t.status!=='open'||t.fee_cents<=0)return jsonError('Tournament is not open for checkout',409);
- const {data:regId,error:reserveErr}=await db.rpc('reserve_tournament_slot',{p_tournament_id:tournamentId,p_user_id:user.id});
+ const {data:regId,error:reserveErr}=await db.rpc('reserve_tournament_slot',{p_tournament_id:tournamentId,p_user_id:user.id,p_accept_rules:parsed.data.acceptedRules});
  if(reserveErr||!regId)return jsonError(reserveErr?.message||'Unable to reserve tournament slot',409);
  const {data:prior}=await db.from('payments').select('checkout_session_id,id').eq('registration_id',regId).eq('status','pending').limit(1).maybeSingle();
  if(prior){
