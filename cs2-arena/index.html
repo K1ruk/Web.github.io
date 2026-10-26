@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07090e"><meta name="description" content="NEXUS CS2 solo tournament platform concept">
+  <title>NEXUS — CS2 Competitive Arena</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="grid-overlay"></div>
+  <div class="app">
+    <aside class="sidebar glass">
+      <a class="brand" href="#" data-view="overview" aria-label="NEXUS home"><span class="brand-mark">✳</span><span><b>NEXUS</b><small>COMPETITIVE ARENA</small></span></a>
+      <div class="nav-label" data-i18n="platform">PLATFORM</div>
+      <nav id="sidebarNav" aria-label="Main navigation">
+        <button class="nav-link active" data-view="overview"><span class="nav-icon">◈</span><span data-i18n="overview">Overview</span></button>
+        <button class="nav-link" data-view="players"><span class="nav-icon">♙</span><span data-i18n="players">Players</span></button>
+        <button class="nav-link" data-view="teams"><span class="nav-icon">⬡</span><span data-i18n="teams">Teams</span></button>
+        <button class="nav-link" data-view="schedule"><span class="nav-icon">◷</span><span data-i18n="schedule">Schedule</span></button>
+      </nav>
+      <div class="nav-label" data-i18n="control">CONTROL ROOM</div>
+      <nav aria-label="Admin and registration">
+        <button class="nav-link" data-view="analyzer"><span class="nav-icon">◎</span><span data-i18n="analyzer">Skill analyzer</span><span class="tiny-tag">AI*</span></button>
+        <button class="nav-link" data-view="register"><span class="nav-icon">↗</span><span data-i18n="registration">Registration</span></button>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="side-event glass-light">
+        <span class="eyebrow"><span class="pulse"></span> SEASON 01 / OPEN</span>
+        <strong>THE SOLO CIRCUIT</strong>
+        <p data-i18n="side_desc">Your team is waiting to be discovered.</p>
+        <div class="progress"><span></span></div>
+        <div class="flex-between mini"><span>40 / 64</span><span data-i18n="registered">registered</span></div>
+      </div>
+      <div class="account"><div class="avatar">SX</div><span><b>ShadowX</b><small data-i18n="demo_account">Demo account</small></span><span class="account-arrow">⌄</span></div>
+    </aside>
+    <div class="main-shell">
+      <header class="topbar">
+        <button class="mobile-menu outline" id="mobileMenu" aria-label="Toggle navigation">☰</button>
+        <div class="breadcrumbs"><span>NEXUS</span><span class="slash">/</span><b id="breadcrumb">Overview</b></div>
+        <div class="top-actions"><span class="live-pill"><i></i><span data-i18n="registration_open">REGISTRATION OPEN</span></span>
+          <div class="lang-switch" aria-label="Language"><button id="langEn" class="active">EN</button><button id="langMn">МН</button></div>
+          <span class="notif" aria-label="Notifications">♢<i></i></span>
+        </div>
+      </header>
+      <main id="content" aria-live="polite"></main>
+      <footer class="footer"><span>© 2026 NEXUS ARENA · CONCEPT PROTOTYPE</span><span data-i18n="footer_note">Demo data only · No live Steam analysis or payments</span></footer>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
