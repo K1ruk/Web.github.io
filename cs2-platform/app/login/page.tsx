@@ -98,11 +98,10 @@ export default function Login() {
             minHeight: 58,
             borderColor: '#8e90f166',
             background: '#5865f211',
-            justifyContent: 'space-between',
+            justifyContent: 'center',
           }}
         >
           <span>{busy === 'discord' ? '...' : mn ? 'DISCORD-ООР НЭВТРЭХ' : 'CONTINUE WITH DISCORD'}</span>
-          <span aria-hidden="true" style={{ color: '#a4acff', letterSpacing: 0 }}>D</span>
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 13, margin: '29px 0', color: '#777', fontSize: 10, letterSpacing: '.18em' }}>
