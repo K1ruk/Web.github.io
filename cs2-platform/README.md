@@ -9,7 +9,7 @@ The visual style follows the black editorial references: oversized typography, r
 - Email magic-link sign-in with Supabase SSR sessions.
 - Authenticated player profiles with two different CS2 positions.
 - Steam OpenID account linking verified by a Steam server-side signature check.
-- FACEIT lookup using **exact Elo** and available recent K/D; explicitly provisional 0–100 skill model and admin-controlled Tier 1–5 approval.
+- Admin Steam URL analyzer (direct SteamID64 or vanity URL with an optional Steam Web API key), plus FACEIT lookup using **exact Elo** and available recent K/D; explicitly provisional 0–100 skill model and admin-controlled Tier 1–5 approval.
 - Admin tournament creation, opening and locking; protected admin-only tier assessment and team-generation endpoints.
 - Server-side checkout using real tournament fee/currency, Stripe-hosted payment and verified, idempotent webhooks.
 - Database migrations with Row Level Security (RLS), minimum client grants, payment/audit records and atomic roster publication.
