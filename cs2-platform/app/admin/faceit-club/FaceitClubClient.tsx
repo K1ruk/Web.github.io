@@ -11,7 +11,7 @@ type QueueDiagnosis = {
   detailLookup: 'found' | 'not_found';
   listingChecks: Array<{
     entityType: 'clan' | 'club' | 'hub';
-    outcome: 'matched' | 'not_listed' | 'not_found' | 'access_denied' | 'temporarily_unavailable' | 'invalid_response';
+    outcome: 'matched' | 'not_listed' | 'not_found' | 'access_denied' | 'unsupported_filter' | 'temporarily_unavailable' | 'invalid_response';
   }>;
   sampleMatch: {
     id: string;
