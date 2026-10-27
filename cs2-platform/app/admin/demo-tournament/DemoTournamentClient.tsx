@@ -9,6 +9,7 @@ import {
 } from '@/lib/demo-tournament';
 import { isRosterDraft, rosterIncludesExactly, type RosterDraft } from '@/lib/roster-draft';
 import { TeamRosterEditor } from '../TeamRosterEditor';
+import { PlayerTournamentStatus, type PlayerTournamentSnapshot } from '@/components/PlayerTournamentStatus';
 
 type Props={
   candidates:ClubDemoPlayer[];
@@ -32,6 +33,7 @@ export function DemoTournamentClient({candidates,archivePlayers,archiveMaps}:Pro
   const [busy,setBusy]=useState(false);
   const [feedback,setFeedback]=useState('');
   const [error,setError]=useState('');
+  const [playerPreviewStage,setPlayerPreviewStage]=useState<'registered'|'tier'|'roster'>('registered');
 
   const players=useMemo(()=>candidates.slice(0,count),[candidates,count]);
   const approved=players.filter(p=>approvals[p.id]!==undefined).length;
@@ -40,6 +42,28 @@ export function DemoTournamentClient({candidates,archivePlayers,archiveMaps}:Pro
     &&approved===players.length;
   const previewReady=rosters!==null
     &&rosterIncludesExactly(rosters,players.map(p=>p.id));
+  const demoTeamIndex=rosters?.findIndex(team=>team.some(slot=>slot.registration_id===selected?.id))??-1;
+  const demoTeam=demoTeamIndex>=0?rosters?.[demoTeamIndex]??null:null;
+  const showRoster=playerPreviewStage==='roster'&&published&&!!demoTeam;
+  const previewSnapshot:PlayerTournamentSnapshot|null=selected?{
+    id:'demo-player-view',
+    eventName:'NEXUS FIRST TOURNAMENT · DEMO',
+    eventStatus:showRoster?'published':'locked',
+    registrationStatus:'paid',
+    tier:playerPreviewStage==='registered'?null:approvals[selected.id]?.tier??3,
+    teamName:showRoster?'SQUAD '+String(demoTeamIndex+1).padStart(2,'0'):null,
+    assignedRole:showRoster?demoTeam?.find(slot=>slot.registration_id===selected.id)?.assigned_role??null:null,
+    teammates:showRoster&&demoTeam?demoTeam.map(slot=>{
+      const person=players.find(p=>p.id===slot.registration_id);
+      return {
+        nickname:person?.nickname||'Player',
+        role:slot.assigned_role,
+        tier:approvals[slot.registration_id]?.tier??null,
+        isYou:slot.registration_id===selected.id,
+      };
+    }):[],
+    fixtures:[],
+  }:null;
   const rosterPlayers=players.map(p=>({
     id:p.id,nickname:p.nickname,
     status:'paid', // TeamRosterEditor expects confirmed participant status.
@@ -279,6 +303,31 @@ export function DemoTournamentClient({candidates,archivePlayers,archiveMaps}:Pro
       </div>
     </section>}
 
+    <section className="panel nx-demo-panel nx-demo-player-stage" aria-label="Actual player dashboard appearance">
+      <div className="row-space">
+        <div>
+          <div className="section-kicker">05 / THE REAL PLAYER EXPERIENCE</div>
+          <h2>What your players will see</h2>
+          <p className="small-text">This uses the same tournament-status component as the signed-in NEXUS dashboard. Switch the stage to preview the registration, review, and published team experience.</p>
+        </div>
+        <Link className="outline-button small" href="/dashboard">OPEN MY REAL DASHBOARD ↗</Link>
+      </div>
+      <div className="nx-demo-player-stage-nav" aria-label="Preview registration stage">
+        {([
+          ['registered','01 · CONFIRMED ENTRY'],
+          ['tier','02 · TIER APPROVED'],
+          ['roster','03 · TEAM REVEAL'],
+        ] as const).map(([stage,label])=><button type="button"
+          key={stage} className={'outline-button small'+(playerPreviewStage===stage?' nx-demo-active':'')}
+          aria-pressed={playerPreviewStage===stage} onClick={()=>setPlayerPreviewStage(stage)}>
+          {label}
+        </button>)}
+      </div>
+      {playerPreviewStage==='roster'&&!showRoster&&<p className="nx-demo-hint">
+        First assign example tiers, generate teams, and click SHOW PUBLIC-STYLE TEAM PREVIEW to see a full five-player squad here.
+      </p>}
+      <PlayerTournamentStatus snapshot={previewSnapshot} demo locale={mn?'mn':'en'}/>
+    </section>
     {(feedback||error)&&<p className={'nx-demo-feedback'+(error?' has-error':'')}
       role={error?'alert':'status'}>{error||feedback}</p>}
     <p className="nx-demo-footer">ALL ACTIONS ON THIS PAGE ARE ISOLATED SIMULATION. NO TOURNAMENTS, REGISTRATIONS, PLAYER TIER DECISIONS, STEAM LINKS, PAYMENTS OR TEAM RECORDS ARE SAVED.</p>
