@@ -12,9 +12,11 @@ import {
 type Props = {
   profile: PlayerProfile;
   steamId: string | null;
+  discordConnected: boolean;
   tournaments: PublicTournament[];
   registrations: PlayerRegistration[];
   rulesUrl: string | null;
+  freeRulesUrl: string;
   refundUrl: string | null;
   paymentsEnabled: boolean;
   now: number;
@@ -53,7 +55,7 @@ function readableDate(value: string | null, locale: 'en' | 'mn') {
 }
 
 export function RegistrationClient({
-  profile, steamId, tournaments, registrations, rulesUrl, refundUrl, paymentsEnabled, now,
+  profile, steamId, discordConnected, tournaments, registrations, rulesUrl, freeRulesUrl, refundUrl, paymentsEnabled, now,
 }: Props) {
   const { locale } = useLocale();
   const mn = locale === 'mn';
@@ -75,9 +77,10 @@ export function RegistrationClient({
   const registration = registrations.find(item => item.tournament_id === selected);
   const alreadyPaid = confirmedEntry(registration);
   const pending = activePayment(registration, now);
-  const rulesReady = !!rulesUrl && !!refundUrl;
+  const isFree = !!event && !event.demo && event.fee_cents === 0;
+  const rulesReady = isFree ? !!freeRulesUrl : !!rulesUrl && !!refundUrl;
   const entryReady = !!event && !event.demo && availability === 'open' && playerReady && steamReady
-    && rulesReady && paymentsEnabled && !alreadyPaid;
+    && discordConnected && rulesReady && (isFree || paymentsEnabled) && !alreadyPaid;
   const canCheckout = entryReady && accepted && !busy;
   const paidRegistrations = registrations.filter(reg => reg.status === 'paid').length;
 
@@ -87,10 +90,11 @@ export function RegistrationClient({
   else if (alreadyPaid) blocker = mn ? 'Та энэ тэмцээнд бүртгүүлсэн.' : 'You already have a confirmed place in this event.';
   else if (availability === 'full') blocker = mn ? 'Энэ тэмцээний бүх слот дүүрсэн.' : 'All confirmed places are taken.';
   else if (availability !== 'open') blocker = mn ? 'Энэ тэмцээний бүртгэл хаагдсан.' : 'Registration is not open for this event.';
+  else if (!discordConnected) blocker = mn ? 'Тэмцээнд бүртгүүлэхийн тулд Discord-р нэвтэрнэ үү.' : 'Sign in with a verified Discord account to register for tournaments.';
   else if (!steamReady) blocker = mn ? 'Эхлээд Steam хаягаа баталгаажуулна уу.' : 'Connect your Steam account before entering.';
   else if (!playerReady) blocker = mn ? 'Тоглогчийн профайлаа бүрэн бөглөнө үү.' : 'Complete your nickname and preferred roles in My Account.';
-  else if (!rulesReady) blocker = mn ? 'Тэмцээний дүрэм, буцаалтын нөхцөл хараахан нийтлэгдээгүй.' : 'Registration opens after the tournament rules and refund policy are published.';
-  else if (!paymentsEnabled) blocker = mn ? 'Төлбөрийн систем хараахан идэвхжээгүй байна.' : 'Checkout is not configured yet. No payment can be taken.';
+  else if (!rulesReady) blocker = mn ? 'Тэмцээний дүрэм, буцаалтын нөхцөл хараахан нийтлэгдээгүй.' : 'Tournament rules must be published before registration opens.';
+  else if (!isFree && !paymentsEnabled) blocker = mn ? 'Төлбөрийн систем хараахан идэвхжээгүй байна.' : 'Checkout is not configured yet. No payment can be taken.';
   else if (!accepted) blocker = mn ? 'Үргэлжлүүлэхийн тулд дүрэм, нөхцөлийг зөвшөөрнө үү.' : 'Review and accept the tournament rules to continue.';
 
   async function checkout() {
@@ -98,14 +102,20 @@ export function RegistrationClient({
     setBusy(true);
     setErrorMessage('');
     try {
-      const response = await fetch('/api/checkout', {
+      const response = await fetch(isFree ? '/api/registrations/free' : '/api/checkout', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tournamentId: event.id, acceptedRules: true }),
       });
       const body = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(body?.error || 'Unable to start checkout');
+      if (!response.ok) throw new Error(body?.error || 'Unable to register');
+      if (isFree) {
+        if (body?.registered !== true || body?.paymentRequired !== false)
+          throw new Error('Registration was not confirmed by the server');
+        window.location.assign('/dashboard?registration=confirmed');
+        return;
+      }
 
       // Stripe-hosted checkout only. Reject unexpected third-party redirects.
       const nextUrl = new URL(body?.url);
@@ -224,6 +234,11 @@ export function RegistrationClient({
 
           <div className="entry-checklist">
             <div className="entry-check-row">
+              <span className={'entry-check-icon' + (discordConnected ? ' done' : '')}>{discordConnected ? '✓' : '!'}</span>
+              <span><strong>DISCORD</strong><small>{discordConnected ? (mn ? 'БАТАЛГААЖСАН' : 'OAUTH VERIFIED') : (mn ? 'DISCORD-Р НЭВТРЭХ ШААРДЛАГАТАЙ' : 'DISCORD SIGN-IN REQUIRED')}</small></span>
+              {!discordConnected && <Link href="/login">{mn ? 'НЭВТРЭХ' : 'SIGN IN'} ↗</Link>}
+            </div>
+            <div className="entry-check-row">
               <span className={'entry-check-icon' + (steamReady ? ' done' : '')}>{steamReady ? '✓' : '!'}</span>
               <span><strong>STEAM</strong><small>{steamReady ? (mn ? 'БАТАЛГААЖСАН' : 'VERIFIED ACCOUNT') : (mn ? 'ХОЛБООГҮЙ' : 'NOT CONNECTED')}</small></span>
               {!steamReady && <a href="/api/steam/start">{mn ? 'ХОЛБОХ' : 'CONNECT'} ↗</a>}
@@ -250,15 +265,17 @@ export function RegistrationClient({
               <span>{mn ? 'НИЙТ' : 'ENTRY TOTAL'}</span>
               <strong>{event ? (event.demo ? (mn ? 'ТОВЛООГҮЙ' : 'TBA') : displayFee(event.fee_cents, event.currency, locale)) : '—'}</strong>
             </div>
-            <p className="entry-summary-payment">{mn ? 'Stripe-ийн аюулгүй хуудсаар төлбөр төлнө. Төлбөр баталгаажсаны дараа таны оролцоо бүртгэгдэнэ.' : 'Payment is processed securely by Stripe. A place is only confirmed once payment is verified.'}</p>
+            <p className="entry-summary-payment">{isFree
+              ? (mn ? 'Энэ тэмцээн үнэгүй. Steam, Discord болон дүрмийг баталгаажуулсны дараа оролцоо шууд бүртгэгдэнэ.' : 'This tournament is free. After verifying Discord, Steam and the rules, your entry is confirmed instantly without payment.')
+              : (mn ? 'Stripe-ийн аюулгүй хуудсаар төлбөр төлнө. Төлбөр баталгаажсаны дараа таны оролцоо бүртгэгдэнэ.' : 'Payment is processed securely by Stripe. A place is only confirmed once payment is verified.')}</p>
           </div>
 
           {rulesReady && <label className="entry-consent">
             <input type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} disabled={!entryReady || busy}/>
             <span>{mn ? 'Би ' : 'I agree to the '}
-              <a href={rulesUrl!} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>{mn ? 'тэмцээний дүрэм' : 'tournament rules'}</a>
-              {mn ? ' болон ' : ' and '}
-              <a href={refundUrl!} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>{mn ? 'төлбөр буцаах нөхцөлийг' : 'refund policy'}</a>.
+              <a href={isFree ? freeRulesUrl : rulesUrl!} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>{mn ? 'тэмцээний дүрэм' : 'tournament rules'}</a>
+              {!isFree && <>{mn ? ' болон ' : ' and '}
+                <a href={refundUrl!} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>{mn ? 'төлбөр буцаах нөхцөлийг' : 'refund policy'}</a></>}.
             </span>
           </label>}
 
@@ -266,7 +283,7 @@ export function RegistrationClient({
             <span>{event?.demo ? (mn ? 'ЗАГВАР ҮЗЭХ ГОРИМ' : 'PREVIEW ONLY') : busy ? (mn ? 'ТҮР ХҮЛЭЭНЭ ҮҮ' : 'OPENING CHECKOUT...')
               : alreadyPaid ? (mn ? 'БҮРТГЭЛ БАТАЛГААЖСАН' : 'ENTRY CONFIRMED')
                 : pending ? (mn ? 'ТӨЛБӨР ҮРГЭЛЖЛҮҮЛЭХ' : 'RESUME CHECKOUT')
-                  : (mn ? 'ТӨЛБӨР ТӨЛӨХ' : 'CONTINUE TO CHECKOUT')}</span>
+                  : isFree ? (mn ? 'ҮНЭГҮЙ БҮРТГҮҮЛЭХ' : 'CONFIRM FREE ENTRY') : (mn ? 'ТӨЛБӨР ТӨЛӨХ' : 'CONTINUE TO CHECKOUT')}</span>
             <span aria-hidden="true">↗</span>
           </button>
           {errorMessage && <p className="entry-review-error" role="alert">{errorMessage}</p>}
