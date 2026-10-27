@@ -33,6 +33,8 @@ type Props = {
   email: string;
   displayName: string;
   discordConnected: boolean;
+  discordAvatarUrl: string | null;
+  steamAvatarUrl: string | null;
   profile: Profile;
   steamId: string | null;
   stats: Stats;
@@ -63,8 +65,49 @@ function statusLabel(status: string, mn: boolean) {
   return labels[status]?.[mn ? 1 : 0] || status.replace(/_/g, ' ').toUpperCase();
 }
 
+function AvatarPhoto({
+  src, provider, large = false, fallback = '',
+}: {
+  src: string | null;
+  provider: 'Discord' | 'Steam';
+  large?: boolean;
+  fallback?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt={provider + ' profile picture'}
+        className={large ? 'gamer-avatar-photo' : 'gamer-provider-photo'}
+        referrerPolicy="no-referrer"
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  if (large && fallback) return <>{fallback}</>;
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="gamer-avatar-fallback"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-label={provider + ' picture unavailable'}
+      role="img"
+    >
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20c0-4 2.8-6 7-6s7 2 7 6" />
+    </svg>
+  );
+}
+
 export function DashboardClient({
-  email, displayName, discordConnected, profile, steamId, stats, registrations,
+  email, displayName, discordConnected, discordAvatarUrl, steamAvatarUrl, profile, steamId, stats, registrations,
 }: Props) {
   const { locale } = useLocale();
   const mn = locale === 'mn';
@@ -212,7 +255,7 @@ export function DashboardClient({
             </div>
             <div className="gamer-id-main">
               <div className="gamer-avatar" aria-label={playerName}>
-                <div className="gamer-avatar-inner">{monogram}</div>
+                <div className="gamer-avatar-inner"><AvatarPhoto key={steamAvatarUrl || discordAvatarUrl || "fallback"} src={steamAvatarUrl || discordAvatarUrl} provider={steamAvatarUrl ? "Steam" : "Discord"} large fallback={monogram} /></div>
                 <span className="gamer-avatar-corner gamer-avatar-tl" />
                 <span className="gamer-avatar-corner gamer-avatar-br" />
               </div>
@@ -297,12 +340,12 @@ export function DashboardClient({
             </div>
             <div className="gamer-loadout-connections">
               <div className="gamer-provider-row">
-                <span className="gamer-provider-mark">D</span>
-                <span>DISCORD</span>
+                <span className="gamer-provider-mark"><AvatarPhoto key={discordAvatarUrl || "discord-placeholder"} src={discordAvatarUrl} provider="Discord" /></span>
+                <span>{discordConnected ? 'DISCORD' : 'EMAIL'}</span>
                 <small>{discordConnected ? (mn ? 'ХОЛБОГДСОН' : 'CONNECTED') : (mn ? 'ИМЭЙЛЭЭР НЭВТЭРСЭН' : 'EMAIL LOGIN')}</small>
               </div>
               <div className="gamer-provider-row">
-                <span className="gamer-provider-mark">S</span>
+                <span className="gamer-provider-mark"><AvatarPhoto key={steamAvatarUrl || "steam-placeholder"} src={steamAvatarUrl} provider="Steam" /></span>
                 <span>STEAM</span>
                 {steamId
                   ? <a href={`https://steamcommunity.com/profiles/${steamId}`} target="_blank" rel="noopener noreferrer" title={steamId}>{mn ? 'БАТАЛГААЖСАН ↗' : 'VERIFIED ↗'}</a>
