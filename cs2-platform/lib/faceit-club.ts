@@ -182,6 +182,9 @@ export type FaceitMatchInspection = {
   teams: Array<{ faction: string; name: string; score: number | null }>;
   maps: FaceitMatchMap[];
   hasPlayerStats: boolean;
+  /** FACEIT match competition_id exactly equals the selected queue UUID. */
+  queueAssociationVerified: boolean;
+  /** A queue/competition match does not independently authenticate Club ownership. */
   clubAssociationVerified: false;
 };
 
@@ -275,7 +278,11 @@ export function summarizeFaceitMatch(
     teams,
     maps,
     hasPlayerStats: maps.some(map => map.teams.some(team => team.players.length > 0)),
-    // A FACEIT Club UUID is NOT established as a competition/hub identifier.
+    // FACEIT itself associates this match with the selected queue competition
+    // iff both identifiers and competition type match. This is stronger than
+    // a pasted URL but still not proof of human Club administrator identity.
+    queueAssociationVerified:
+      details.competition_id === NEXUS_FACEIT_QUEUE_ID && details.competition_type === 'hub',
     clubAssociationVerified: false,
   };
 }
