@@ -154,6 +154,45 @@ on the FACEIT response to the OpenID-verified Steam ID, not a user-submitted
 nickname or Faceit URL. No auto-tiering, result import or payment bypass
 is enabled.
 
+## Admin and player UI — separated operations, cool-tone identity
+
+The first-tournament interface was redesigned around a **graphite /
+ice-blue** visual identity, replacing the earlier warm orange/brown
+accents while preserving the existing registration, payment, tier and
+publication safeguards.
+
+**Admin `/admin`:** one selected event, an at-a-glance status overview,
+and separate **Overview / Players & tiers / Team builder / Matches /
+Tools & data** workspace tabs. The admin can filter entrants by nickname
+or pending/approved tier; individual FACEIT Club baseline reviews open
+only when a player is selected. Event creation is collapsible; the
+standalone demo, FACEIT Club archive and skill lab appear under Tools.
+
+**Real player `/dashboard`:** the tournament stage is shown before
+secondary identity cards or achievements:
+1. Confirmed registration after real Discord+Steam verification;
+2. Admin reviewing or having approved Tier 1–5;
+3. Published roster with teammate nicknames, individual assigned roles
+   and tiers, plus official scheduled match details.
+
+Before publication, server-rendered player snapshots intentionally
+suppress *all* draft team identities and rosters. The server only fetches
+other players' team data through published/finished events where the
+current authenticated user has a real team membership. No admin-only
+balancing scores, registered Steam IDs, unpublished lineups or FACEIT
+Club stats belonging to other users are exposed. Tournament stage
+display is shared with the safe test page.
+
+**Simulator `/admin/demo-tournament`:** section **05 / THE REAL PLAYER
+EXPERIENCE** previews the same signed-in player component across
+confirmed, approved, and released-team stages. It uses fake tiers and
+fictional registrations with real archived Club display nicknames
+only; the preview is clearly marked SIMULATION.
+
+Secondary dashboard achievements now use a collapsible panel so current
+tournament progress remains prominent. The admin and player components
+remain responsive across mobile and desktop.
+
 ## Interactive first-tournament demo (archive player fixtures; zero writes)
 
 Open **/admin/demo-tournament** via the main **/admin** shortcut
