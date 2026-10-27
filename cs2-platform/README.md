@@ -154,6 +154,39 @@ on the FACEIT response to the OpenID-verified Steam ID, not a user-submitted
 nickname or Faceit URL. No auto-tiering, result import or payment bypass
 is enabled.
 
+## Interactive first-tournament demo (archive player fixtures; zero writes)
+
+Open **/admin/demo-tournament** via the main **/admin** shortcut
+**PREVIEW CLUB PLAYERS / DEMO TEAMS**. This is an admin-only read-only
+preview populated from the existing saved FACEIT Club archive:
+
+- Select **10, 20 or 40 simulated entrants** (if enough saved Club players
+  are available). Nicknames, archived ADR/KD, NEXUS lobby performance
+  rating, entry win rate and map samples come from verified persisted
+  Club statistics.
+- **Registration status, primary/secondary CS2 roles, and tier decisions
+  are explicitly invented** for display. These players have **not**
+  necessarily created NEXUS accounts, connected Discord/Steam, registered,
+  paid, or consented to join the tournament. KAST stays unavailable.
+- Inspect an individual's real Club baseline, assign a purely local
+  Tier 1–5 and 0–100 balancing score in the sandbox, or click
+  **AUTO-FILL EXAMPLE TIERS** to populate deliberately arbitrary tier
+  fixtures for a quick preview. These are NOT evidence-based rankings.
+- **GENERATE DEMO TEAMS** uses the production role-aware
+  `buildBalancedTeams` algorithm through a **POST admin-only,
+  same-origin, nonpersisting** `/api/admin/demo-tournament/teams` endpoint.
+  Before balancing, the server validates all simulated IDs are real archived
+  FACEIT player IDs, and validates roles and score ranges. The UI uses the
+  existing five-player swap/role editor and can show a sample public-style
+  roster. This never calls `publish_balanced_teams`.
+- Changing the sample size or scores clears stale rosters. All demo
+  approvals/teams exist only in browser memory. Refreshing the page
+  resets them. No Auth users, tournament registrations, payment events,
+  published teams, or real skill assessments are created or modified.
+
+This isolated preview is intentionally separate from the real /register,
+ /dashboard and /admin tournament database workflows.
+
 ## June 2026+ FACEIT Club archive & original NEXUS Match Rating
 
 **Scope:** exactly one queue, `26ca1fb5-eb37-4b3c-9005-402eca7a9008`.
