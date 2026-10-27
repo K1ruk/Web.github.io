@@ -3,8 +3,7 @@ import Stripe from 'stripe';
 import { z } from 'zod';
 import { requireUser } from '@/lib/auth';
 import { adminDb } from '@/lib/supabase/admin';
-import { jsonError,sameOrigin } from '@/lib/security';
-import { siteUrl } from '@/lib/env';
+import { jsonError,sameOrigin,trustedSiteOrigin } from '@/lib/security';
 const schema=z.object({tournamentId:z.string().uuid(),acceptedRules:z.literal(true)});
 export async function POST(req:NextRequest){
  if(!sameOrigin(req))return jsonError('Origin not allowed',403);
@@ -29,7 +28,7 @@ export async function POST(req:NextRequest){
  try{session=await stripe.checkout.sessions.create({
   mode:'payment',client_reference_id:regId,customer_email:user.email||undefined,
   line_items:[{price_data:{currency:t.currency,unit_amount:t.fee_cents,product_data:{name:t.name+' — solo entry'}},quantity:1}],
-  success_url:siteUrl()+'/dashboard?checkout=return',cancel_url:siteUrl()+'/register?checkout=cancel',
+  success_url:trustedSiteOrigin(req)+'/dashboard?checkout=return',cancel_url:trustedSiteOrigin(req)+'/register?checkout=cancel',
   expires_at:Math.floor(Date.now()/1000)+30*60,
   metadata:{registration_id:regId,tournament_id:tournamentId,user_id:user.id}
  });}catch{return jsonError('Checkout provider unavailable',503);}
