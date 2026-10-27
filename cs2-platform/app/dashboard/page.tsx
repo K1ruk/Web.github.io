@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { adminDb } from '@/lib/supabase/admin';
 import { DashboardClient } from './DashboardClient';
+import { discordAvatarFromMetadata, steamAvatarFromId } from '@/lib/profile-avatars';
 
 export const dynamic = 'force-dynamic';
 
@@ -144,12 +145,16 @@ export default async function Dashboard() {
     (Array.isArray(providers) && providers.includes('discord')) ||
     user.app_metadata?.provider === 'discord';
   const profile = profileResult.data;
+  const discordAvatarUrl = discordConnected ? discordAvatarFromMetadata(user.user_metadata || {}) : null;
+  const steamAvatarUrl = await steamAvatarFromId(steamResult.data?.steam_id || null);
 
   return (
     <DashboardClient
       email={user.email || ''}
       displayName={greetingName(profile?.nickname, user.user_metadata || {})}
       discordConnected={discordConnected}
+      discordAvatarUrl={discordAvatarUrl}
+      steamAvatarUrl={steamAvatarUrl}
       profile={profile}
       steamId={steamResult.data?.steam_id || null}
       stats={{
