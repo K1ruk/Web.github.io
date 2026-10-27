@@ -58,6 +58,21 @@ Never accept a client-submitted `admin=true` flag. Admin access is assigned manu
 
 OAuth does not require Resend SMTP, a custom email-sending domain, a Discord server, or a Discord bot. Do not request unnecessary Discord permissions such as bot access or guild membership. Keep the existing magic-link fallback until an alternate account-recovery policy is designed.
 
+## Troubleshooting Steam account linking
+
+The NEXUS account and Steam OpenID login are separate. Steam linking requires a working **server-side Supabase secret key** because the server—not the browser—must verify and save the Steam identity.
+
+- Find the **Secret key** (starts with `sb_secret_`) for the same project as `NEXT_PUBLIC_SUPABASE_URL` in Supabase Dashboard > Project Settings > API Keys.
+- On the local machine, store it only in `cs2-platform/.env.local` as `SUPABASE_SECRET_KEY=sb_secret_...`. Do not copy the `sb_publishable_` key into this field. Never paste a secret key into GitHub, chat or a client-side `NEXT_PUBLIC_` variable.
+- Stop and restart `npm run dev` after changing local env settings. For Vercel preview, configure the secret in the project's **Preview** environment variables (preferably restricted to the feature branch) and redeploy; the deployed environment cannot read local `.env.local`.
+- To verify the local private key without displaying it, execute this command inside `cs2-platform` using Node 22+:
+
+```bash
+node --env-file=.env.local -e "fetch(process.env.NEXT_PUBLIC_SUPABASE_URL+'/rest/v1/',{headers:{apikey:process.env.SUPABASE_SECRET_KEY||''}}).then(r=>console.log('Supabase key HTTP status:',r.status)).catch(e=>console.error(e.message))"
+```
+
+A `200` response confirms the administrative Data API key is accepted; `401` indicates a rejected key. This sends only a server-side request and prints the HTTP status, not the key. When the key is accepted, retry `/register` > **CONNECT STEAM**. The site now checks administrative Supabase access before the Steam OpenID handoff and returns a specific setup error if the check fails.
+
 ## Set up FACEIT
 Create a server-side FACEIT Data API key at https://developers.faceit.com/ (see their Data API documentation). Store in `FACEIT_API_KEY` on the server. Rankings will be unavailable without this key, but admins can manually approve a tier and score.
 
