@@ -4,10 +4,12 @@ import { z } from 'zod';
 import { requireUser } from '@/lib/auth';
 import { adminDb } from '@/lib/supabase/admin';
 import { jsonError,sameOrigin,trustedSiteOrigin } from '@/lib/security';
+import { hasVerifiedDiscordProvider } from '@/lib/discord-auth';
 const schema=z.object({tournamentId:z.string().uuid(),acceptedRules:z.literal(true)});
 export async function POST(req:NextRequest){
  if(!sameOrigin(req))return jsonError('Origin not allowed',403);
  const user=await requireUser();if(!user)return jsonError('Sign in required',401);
+ if(!hasVerifiedDiscordProvider(user.app_metadata))return jsonError('Connect and sign in with Discord before entering',403);
  const parsed=schema.safeParse(await req.json().catch(()=>null));if(!parsed.success)return jsonError('You must accept the rules and select an event');
  const secret=process.env.STRIPE_SECRET_KEY;if(!secret)return jsonError('Payments are not configured',503);
  if(secret.startsWith('sk_live_')&&(process.env.ALLOW_LIVE_PAYMENTS!=='true'||!process.env.NEXT_PUBLIC_TOURNAMENT_RULES_URL?.startsWith('https://')||!process.env.NEXT_PUBLIC_REFUND_POLICY_URL?.startsWith('https://')))return jsonError('Live checkout is disabled until approved terms and payment settings are published',503);
