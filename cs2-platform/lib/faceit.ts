@@ -1,6 +1,7 @@
 import 'server-only';
 import { provisionalSkill } from '@/lib/skill';
 import type { SkillContext } from '@/lib/skill';
+import { recentFaceitMetrics, lifetimeFaceitMetrics } from '@/lib/faceit-metrics';
 
 type FaceitPlayer = {
   player_id: string;
@@ -10,7 +11,7 @@ type FaceitPlayer = {
 };
 
 type FaceitHistory = {
-  items?: Array<{ stats?: Record<string, string> }>;
+  items?: Array<{ stats?: Record<string, unknown> }>;
 };
 
 export type FaceitFailureCode = 'not_configured' | 'invalid_key' | 'rate_limited' | 'unavailable' | 'timeout' | 'invalid_response';
@@ -93,54 +94,45 @@ export async function analyzeSteam(steamId: string, context: SkillContext = {}) 
     };
   }
 
-  let kdValues: number[] = [];
-  let statsAvailable = true;
+  let recent = recentFaceitMetrics();
+  let statsAvailable = false;
   try {
     const history = await faceitGet<FaceitHistory>(
       '/players/' + encodeURIComponent(player.player_id) + '/games/cs2/stats?offset=0&limit=30',
     );
-    if (!history || !Array.isArray(history.items)) {
-      statsAvailable = false;
-    } else {
-      kdValues = history.items
-        .map(item => Number(item.stats?.['K/D Ratio']))
-        .filter(value => Number.isFinite(value) && value > 0 && value < 15);
+    if (history && Array.isArray(history.items)) {
+      recent = recentFaceitMetrics(history.items);
+      statsAvailable = recent.matches > 0;
     }
   } catch (error) {
-    // Elo remains valid even if the match-statistics endpoint fails.
-    // No performance bonus is applied without a reliable sample.
+    // Elo remains valid even if advanced performance telemetry is unavailable.
     if (error instanceof FaceitRequestError && ['invalid_key', 'rate_limited'].includes(error.code)) throw error;
-    statsAvailable = false;
   }
-  const kd = kdValues.length
-    ? kdValues.reduce((total, value) => total + value, 0) / kdValues.length
-    : null;
-  // Lifetime aggregate stats are useful for reviewing surprisingly low Elo,
-  // but are *not* proof of intentional underperformance.
+
+  let lifetime = lifetimeFaceitMetrics(null);
   let lifetimeStatsAvailable = false;
-  let lifetimeMatches: number | null = null;
-  let lifetimeKd: number | null = null;
   try {
-    const aggregate = await faceitGet<{ lifetime?: Record<string, string> }>(
+    const aggregate = await faceitGet<{ lifetime?: Record<string, unknown> }>(
       '/players/' + encodeURIComponent(player.player_id) + '/stats/cs2',
     );
     if (aggregate?.lifetime) {
       lifetimeStatsAvailable = true;
-      const matchCount = Number(aggregate.lifetime['Matches']);
-      if (Number.isSafeInteger(matchCount) && matchCount >= 0) lifetimeMatches = matchCount;
-      const aggregateKd = Number(aggregate.lifetime['Average K/D Ratio']);
-      if (Number.isFinite(aggregateKd) && aggregateKd >= 0 && aggregateKd < 15) {
-        lifetimeKd = aggregateKd;
-      }
+      lifetime = lifetimeFaceitMetrics(aggregate.lifetime);
     }
   } catch (error) {
     if (error instanceof FaceitRequestError && ['invalid_key', 'rate_limited'].includes(error.code)) throw error;
   }
-  const suggested = provisionalSkill(elo, kd, kdValues.length, {
+
+  const kd = recent.metrics.kd;
+  const suggested = provisionalSkill(elo, kd, recent.matches, {
     ...context,
-    lifetimeMatches,
-    lifetimeKd,
+    recentMetrics: recent.metrics,
+    recentMetricSamples: recent.counts,
+    lifetimeMetrics: lifetime.metrics,
+    lifetimeMatches: lifetime.matches,
+    lifetimeKd: lifetime.metrics.kd,
   });
+
   return {
     found: true as const,
     playerId: player.player_id,
@@ -148,6 +140,9 @@ export async function analyzeSteam(steamId: string, context: SkillContext = {}) 
     faceitLevel: player.games?.cs2?.skill_level ?? null,
     statsAvailable,
     lifetimeStatsAvailable,
+    recentMetrics: recent.metrics,
+    recentMetricSamples: recent.counts,
+    lifetimeMetrics: lifetime.metrics,
     ...suggested,
   };
 }
