@@ -105,6 +105,13 @@ eligible entries in small batches (at most 3 matchrooms per server request).
 The user can stop between batches, reload the match history, and rerun it;
 existing matches with player statistics are safely skipped. FACEIT rate
 limits or connection failures leave already-committed batches intact.
+Missing or temporarily empty stat pages remain retryable.
+
+The **VIEW SAVED ARCHIVE** action loads an aggregated leaderboard. Clicking
+a player's nickname opens their own, admin-only paginated **map-by-map**
+statistics, FACEIT matchroom links, original nicknames at each match,
+scores, NEXUS Match Ratings, and the additional numeric keys actually
+supplied by FACEIT. This is not a ranking of cross-level skill.
 
 For every match the server **independently re-fetches** official FACEIT match
 details and stats. It requires:
@@ -157,7 +164,9 @@ FACEIT demo Downloads API (separate approval required):
 https://docs.faceit.com/getting-started/Guides/download-api/
 
 **Operational limitation:** scanning and saving run in the admin's
-browser session while it is open, not as a scheduled background sync.
+browser session while it is open, not as a scheduled background sync. They
+require a fully completed bounded history scan to avoid silently omitting
+older June matches. Saved records remain in Supabase across browser sessions.
 Vercel previews still need private `FACEIT_API_KEY` and
 `SUPABASE_SECRET_KEY`; the authenticated owner can test locally where
 both keys are configured. Newly created Supabase archive tables start
