@@ -1,5 +1,5 @@
 'use client';
-import {FormEvent,useState} from 'react';import {useRouter} from 'next/navigation';import Link from 'next/link';import {useLocale} from '@/components/LocaleProvider';
+import {FormEvent,useState} from 'react';import {useRouter} from 'next/navigation';import Link from 'next/link';import {FaceitStatsPanel} from '@/components/FaceitStatsPanel';import type {FaceitMetrics,MetricName} from '@/lib/faceit-metrics';import type {SkillArea} from '@/lib/skill';import {useLocale} from '@/components/LocaleProvider';
 type Tournament={id:string;name:string;status:string;capacity:number;fee_cents:number;currency:string};
 type Team={id:string;name:string;tournament_id:string};
 type Match={id:string;tournament_id:string;team_a:string;team_b:string;stage:string;status:string;best_of:number;scheduled_at:string|null;score_a:number|null;score_b:number|null};
@@ -7,7 +7,7 @@ type Registration={id:string;tournament_id:string;user_id:string;nickname:string
 async function api(method:'POST'|'PATCH',path:string,body:unknown){const res=await fetch(path,{method,credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await res.json();if(!res.ok)throw new Error(data.error||'Request failed');return data;}
 export function AdminClient({tournaments,registrations,teams,matches}:{tournaments:Tournament[];registrations:Registration[];teams:Team[];matches:Match[]}){
  const {locale}=useLocale(),mn=locale==='mn',router=useRouter();
- const [lookupUrl,setLookupUrl]=useState('');const [lookupResult,setLookupResult]=useState<unknown>(null);const [selected,setSelected]=useState(tournaments[0]?.id||''),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[analysis,setAnalysis]=useState<{found?:boolean;elo?:number;protectedElo?:number;historicalPeakElo?:number|null;score?:number;tier?:number;confidence?:string;reason?:string;recentKd?:number|null;lifetimeKd?:number|null;lifetimeMatches?:number|null;reviewFlags?:string[];reviewRequired?:boolean;model?:string}|null>(null),[activeReg,setActiveReg]=useState(''),[tier,setTier]=useState('3'),[score,setScore]=useState('50'),[note,setNote]=useState(''),[preview,setPreview]=useState<unknown>(null);
+ const [lookupUrl,setLookupUrl]=useState('');const [lookupResult,setLookupResult]=useState<unknown>(null);const [selected,setSelected]=useState(tournaments[0]?.id||''),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[analysis,setAnalysis]=useState<{found?:boolean;elo?:number;protectedElo?:number;historicalPeakElo?:number|null;score?:number;tier?:number;confidence?:string;reason?:string;recentKd?:number|null;lifetimeKd?:number|null;lifetimeMatches?:number|null;reviewFlags?:string[];reviewRequired?:boolean;model?:string;recentMetrics?:Partial<FaceitMetrics>|null;lifetimeMetrics?:Partial<FaceitMetrics>|null;recentMetricSamples?:Partial<Record<MetricName,number>>|null;performanceAreas?:Partial<Record<SkillArea,number>>|null;performanceSource?:string}|null>(null),[activeReg,setActiveReg]=useState(''),[tier,setTier]=useState('3'),[score,setScore]=useState('50'),[note,setNote]=useState(''),[preview,setPreview]=useState<unknown>(null);
  const event=tournaments.find(t=>t.id===selected),players=registrations.filter(r=>r.tournament_id===selected);const eventTeams=teams.filter(t=>t.tournament_id===selected),eventMatches=matches.filter(m=>m.tournament_id===selected);
  async function run(task:()=>Promise<unknown>){setBusy(true);setMessage('');try{const result=await task();setMessage(typeof result==='string'?result:(mn?'Амжилттай.':'Action completed.'));router.refresh();}catch(e){setMessage(e instanceof Error?e.message:'Request failed');}finally{setBusy(false);}}
  async function createEvent(e:FormEvent<HTMLFormElement>){e.preventDefault();const fd=new FormData(e.currentTarget);const capacity=Number(fd.get('capacity')),feeCents=Math.round(Number(fd.get('fee'))*100);await run(async()=>{await api('POST','/api/admin/tournaments',{name:fd.get('name'),slug:fd.get('slug'),capacity,feeCents,currency:fd.get('currency')});return 'Tournament created. Refresh to select it.';});}
@@ -84,6 +84,14 @@ async function saveResult(matchId:string,e:FormEvent<HTMLFormElement>){e.prevent
       <div className="details-cell"><small>LIFETIME MATCHES</small><strong>{analysis.lifetimeMatches ?? '—'}</strong></div>
       <div className="details-cell"><small>CONFIDENCE</small><strong style={{fontSize:16}}>{analysis.confidence || 'MANUAL'}</strong></div>
     </div>
+    <FaceitStatsPanel
+      locale={mn?'mn':'en'}
+      recent={analysis.recentMetrics}
+      lifetime={analysis.lifetimeMetrics}
+      recentCounts={analysis.recentMetricSamples}
+      areas={analysis.performanceAreas}
+      source={analysis.performanceSource}
+    />
     {analysis.found === false && <p className="admin-skill-warning" role="status">{analysis.reason || 'No FACEIT data. Manual evaluation required.'}</p>}
     {analysis.reviewFlags && analysis.reviewFlags.length>0 && <div className="admin-skill-warning" role="status">
       <strong>{mn?'АДМИН ХЯНАХ ШААРДЛАГАТАЙ':'ADMIN REVIEW REQUIRED — NOT PROOF OF THROWING'}</strong>
@@ -92,6 +100,8 @@ async function saveResult(matchId:string,e:FormEvent<HTMLFormElement>){e.prevent
         recent_performance_mismatch: mn?'Сүүлийн үзүүлэлт Elo-оос өндөр':'Recent performance higher than Elo suggests',
         lifetime_performance_mismatch: mn?'Нийт үзүүлэлт Elo-оос өндөр':'Lifetime performance higher than Elo suggests',
         limited_faceit_history: mn?'Тоглолтын түүх бага':'Limited lifetime match history',
+        damage_elo_mismatch: mn?'Damage үзүүлэлт Elo-оос өндөр':'Recent damage high relative to FACEIT Elo',
+        utility_elo_mismatch: mn?'Utility үзүүлэлт Elo-оос өндөр':'Lifetime utility high relative to FACEIT Elo',
       } as Record<string,string>)[flag] || flag}</span>)}</div>
     </div>}
   </div>}
