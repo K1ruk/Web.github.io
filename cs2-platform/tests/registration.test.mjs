@@ -36,3 +36,10 @@ test('expired payment holds are not treated as active registrations',()=>{
 test('entry fee formatting uses stored cents and currency',()=>{
  assert.match(displayFee(1500,'eur','en'),/15/);
 });
+
+test('BVG concept event has 10 teams of five and is never bookable', async()=>{
+  const { BVG_FRIENDS_LEAGUE_DEMO } = await import('../lib/registration.ts');
+  assert.equal(BVG_FRIENDS_LEAGUE_DEMO.capacity,50);
+  assert.equal(BVG_FRIENDS_LEAGUE_DEMO.demo,true);
+  assert.equal(entryAvailability(BVG_FRIENDS_LEAGUE_DEMO,now),'closed');
+});
