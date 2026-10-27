@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from '@/components/LocaleProvider';
+import { FaceitStatsPanel } from '@/components/FaceitStatsPanel';
+import type { FaceitMetrics, MetricName } from '@/lib/faceit-metrics';
+import type { SkillArea } from '@/lib/skill';
 
 type Analysis = {
   steamId: string;
@@ -19,6 +22,11 @@ type Analysis = {
   lifetimeKd: number | null;
   lifetimeMatches: number | null;
   performanceBonus: number;
+  performanceSource: string;
+  performanceAreas: Partial<Record<SkillArea, number>>;
+  recentMetrics: Partial<FaceitMetrics> | null;
+  lifetimeMetrics: Partial<FaceitMetrics> | null;
+  recentMetricSamples: Partial<Record<MetricName, number>> | null;
   reviewFlags: string[];
   reviewRequired: boolean;
   score: number;
@@ -170,6 +178,14 @@ export function SkillLabClient({
                     <div className="lab-result-metric"><small>{mn ? 'НИЙТ K/D' : 'LIFETIME K/D'}</small><strong>{result.lifetimeKd === null ? '—' : result.lifetimeKd.toFixed(2)}</strong><span>{result.lifetimeMatches ?? '—'} {mn ? 'FACEIT ТОГЛОЛТ' : 'FACEIT MATCHES'}</span></div>
                     <div className="lab-result-metric"><small>{mn ? 'ХАМГААЛСАН ELO' : 'SEEDING ELO'}</small><strong>{result.protectedElo.toLocaleString()}</strong><span>{mn ? 'ӨМНӨХ ТҮҮХТЭЙ БОЛ НӨЛӨӨЛНӨ' : 'USES VERIFIED HISTORY WHEN AVAILABLE'}</span></div>
                   </div>
+                  <FaceitStatsPanel
+                    locale={locale}
+                    recent={result.recentMetrics}
+                    lifetime={result.lifetimeMetrics}
+                    recentCounts={result.recentMetricSamples}
+                    areas={result.performanceAreas}
+                    source={result.performanceSource}
+                  />
                   <div className="lab-score-area">
                     <div className="lab-score-caption"><span>NEXUS SCORE / 100</span><strong>{result.score.toFixed(2)}</strong></div>
                     <div className="lab-score-track" role="img" aria-label={'NEXUS skill score ' + result.score + ' out of 100'}><span style={{ width: result.score + '%' }} /></div>
@@ -181,11 +197,13 @@ export function SkillLabClient({
                       recent_performance_mismatch: mn ? 'Сүүлийн үзүүлэлттэй зөрүүтэй' : 'Recent performance does not align with current Elo',
                       lifetime_performance_mismatch: mn ? 'Нийт үзүүлэлттэй зөрүүтэй' : 'Lifetime performance does not align with current Elo',
                       limited_faceit_history: mn ? 'FACEIT тоглолтын түүх бага' : 'Limited lifetime FACEIT match history',
+                      damage_elo_mismatch: mn ? 'Damage үзүүлэлт Elo-оос өндөр' : 'Recent damage appears high relative to Elo',
+                      utility_elo_mismatch: mn ? 'Utility үзүүлэлт Elo-оос өндөр' : 'Lifetime utility appears high relative to Elo',
                     } as Record<string, string>)[flag] || flag}</p>)}
                   </div>}
                   <p className="lab-protection-note">{mn
                     ? 'Сүүлийн тоглолт муу байсан ч NEXUS оноо буурахгүй. Түүхэн Elo хамгаалалт зөвхөн өмнө бүртгэсэн, баталгаажсан үнэлгээнд үйлчилнэ.'
-                    : 'Poor recent K/D never reduces a player’s NEXUS score. Historical Elo protection applies only to verified NEXUS snapshots from tournament assessments.'}</p>
+                    : 'Weak recent performance never lowers the Elo-based score. Strong damage, teamwork, opening or clutch play can provide small positive evidence. Historical Elo protection applies only to previously verified tournament snapshots.'}</p>
                   {!result.statsAvailable && <p className="lab-results-note">{mn ? 'Сүүлийн тоглолтын мэдээлэл байхгүй тул энэ тооцоо зөвхөн Elo дээр үндэслэсэн.' : 'Recent match statistics were unavailable. The recommendation uses FACEIT Elo only.'}</p>}
                   <p className="lab-results-note">{mn ? 'Энэ нь эцсийн батлагдсан үнэлгээ биш. Тэмцээний бүртгэлтэй тоглогчдын үнэлгээг админ тусад нь батална.' : 'This does not assign an official tournament tier. An administrator must review and approve each paid tournament entry separately.'}</p>
                 </>
@@ -198,9 +216,9 @@ export function SkillLabClient({
 
         <aside className="lab-aside">
           <section className="lab-card lab-model">
-            <div className="lab-panel-heading"><span className="section-kicker">MODEL / PROTECTED V2</span><span className="lab-model-dot" aria-hidden="true">✳</span></div>
+            <div className="lab-panel-heading"><span className="section-kicker">MODEL / MULTI-SIGNAL V3</span><span className="lab-model-dot" aria-hidden="true">✳</span></div>
             <h2>{mn ? 'NEXUS түвшин' : 'Tier breakdown'}<span>.</span></h2>
-            <p>{mn ? 'FACEIT Elo дээр тулгуурласан түр загвар. Сүүлийн муу тоглолт оноо бууруулахгүй, түүхэн Elo-г боломжтой үед ашиглана.' : 'Exact Elo is translated into a 0–100 score. Strong recent K/D may add up to four points. Bad recent games never lower the score. Verified historical Elo can protect against sudden rating drops.'}</p>
+            <p>{mn ? 'FACEIT Elo үндсэн үзүүлэлт хэвээр. Damage, ассист, utility, entry, clutch-ийн нэмэлт үзүүлэлт хамгийн ихдээ 7.5 оноо нэмж болно. Сул үзүүлэлт оноо хасахгүй.' : 'Exact Elo is translated into a 0–100 score. Recent and lifetime damage, assists, utility, entry and clutch evidence can add up to 7.5 points in total. Missing or weak stats never lower Elo-based seeding. This is an uncalibrated, provisional model.'}</p>
             <div className="lab-tier-list">
               {tierBands.map(band => (
                 <div key={band.tier} className={'lab-tier' + (result?.found && result.tier === band.tier ? ' current' : '')}>
