@@ -562,3 +562,14 @@
 .faceit-club-queue .faceit-club-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
 .faceit-club-queue .faceit-club-meta strong{overflow-wrap:anywhere}
 @media(max-width:520px){.faceit-club-queue .faceit-club-meta{grid-template-columns:1fr}}
+
+
+/* Scoped, read-only FACEIT Club queue diagnostics */
+.faceit-club-diagnostic-note{font-size:12px;line-height:1.8;color:#c9bbae;margin:15px 0 20px}
+.faceit-club-probe-results{border:1px solid #ffffff20;background:#0c0c0d8c;border-radius:10px;padding:13px 16px;margin:16px 0}
+.faceit-club-probe-results p{display:flex;justify-content:space-between;gap:14px;align-items:baseline;margin:0;padding:10px 0;border-bottom:1px solid #ffffff16;color:#b8aca3;font:11px ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
+.faceit-club-probe-results p:last-child{border-bottom:0}
+.faceit-club-probe-results strong{color:#edb183;text-align:right;max-width:65%;overflow-wrap:anywhere}
+.faceit-club-probe-results .faceit-club-diagnostic-title{color:#d2c8c0;letter-spacing:.07em;font-size:10px}
+.faceit-club-probe-results .faceit-club-diagnostic-footnote{font:11px/1.7 inherit;color:#9d9993}
+@media(max-width:540px){.faceit-club-probe-results p{flex-wrap:wrap}.faceit-club-probe-results strong{text-align:left;max-width:100%}}
