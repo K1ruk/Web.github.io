@@ -157,12 +157,8 @@ export function OnboardingClient({ authenticated, discordConnected, steamId, pro
     const db = createBrowserClient(url, key);
     setBusy(true);
     try {
-      // Use the existing OAuth callback URL unchanged so the Supabase allowlist
-      // does not need a new query-string pattern just for the wizard.
-      document.cookie = 'nexus_setup_resume=1; Path=/auth; Max-Age=600; SameSite=Lax'
-        + (window.location.protocol === 'https:' ? '; Secure' : '');
       const options = {
-        redirectTo: window.location.origin + '/auth/callback',
+        redirectTo: window.location.origin + '/auth/callback?next=%2Fonboarding',
         scopes: 'identify email',
       };
       const { error } = authenticated
