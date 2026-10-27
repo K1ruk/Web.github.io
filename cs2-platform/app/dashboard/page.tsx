@@ -43,7 +43,7 @@ export default async function Dashboard() {
       .select('steam_id')
       .eq('user_id', user.id).maybeSingle(),
     db.from('registrations')
-      .select('id,status,tournament_id,assigned_tier,internal_score')
+      .select('id,status,tournament_id,assigned_tier')
       .eq('user_id', user.id).order('created_at', { ascending: false }),
   ]);
 
@@ -264,6 +264,7 @@ export default async function Dashboard() {
       tournamentSnapshots={tournamentSnapshots}
       registrations={registrations.map(entry => ({
         ...entry,
+        assigned_tier: entry.status === 'paid' ? entry.assigned_tier : null,
         tournamentName: events.find(event => event.id === entry.tournament_id)?.name || 'Event',
         teamName: entry.status === 'paid' && visibleTournamentIds.has(entry.tournament_id)
           && members.some(member => member.registration_id === entry.id)
