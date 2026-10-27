@@ -35,6 +35,7 @@ function validDraft(input: unknown): input is Draft {
 }
 function completeProfile(profile: PlayerProfile) {
   return !!(profile && profile.nickname.trim().length >= 2
+    && !/^Player-[0-9a-f]{8}$/i.test(profile.nickname)
     && ROLES.includes(profile.primary_role || '')
     && ROLES.includes(profile.secondary_role || '')
     && profile.primary_role !== profile.secondary_role);
@@ -49,7 +50,7 @@ export function OnboardingClient({ authenticated, discordConnected, steamId, pro
   const mn = locale === 'mn';
   const [step, setStep] = useState(0);
   const [ready, setReady] = useState(false);
-  const [nickname, setNickname] = useState(profile?.nickname || '');
+  const [nickname, setNickname] = useState(profile && !/^Player-[0-9a-f]{8}$/i.test(profile.nickname) ? profile.nickname : '');
   const [primary, setPrimary] = useState(profile?.primary_role || 'Rifler');
   const [secondary, setSecondary] = useState(profile?.secondary_role || 'Support');
   const [profileSaved, setProfileSaved] = useState(completeProfile(profile));
