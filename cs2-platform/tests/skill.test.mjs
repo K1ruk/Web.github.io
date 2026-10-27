@@ -10,7 +10,7 @@ test('missing statistics return elo-only confidence and valid score',()=>{
 test('rejects impossible Elo',()=>assert.throws(()=>provisionalSkill(-1,null,0)));
 
 
-test('recent K/D adjustment is bounded to four score points',()=>{
+test('recent K/D impact stays small relative to Elo',()=>{
   const base=provisionalSkill(2000,null,0);
   const high=provisionalSkill(2000,5,30);
   const low=provisionalSkill(2000,0.2,30);
@@ -25,9 +25,14 @@ test('small samples never change the Elo-only score',()=>{
  assert.equal(insufficient.confidence,'elo-only');
 });
 
-test('larger recent-match samples receive their proper confidence labels',()=>{
+test('confidence distinguishes match volume from actual advanced-stat coverage',()=>{
  assert.equal(provisionalSkill(2400,1.15,10).confidence,'limited');
- assert.equal(provisionalSkill(2400,1.15,20).confidence,'recent-data');
+ assert.equal(provisionalSkill(2400,1.15,20).confidence,'limited');
+ assert.equal(provisionalSkill(2400,null,30).confidence,'elo-only');
+ assert.equal(provisionalSkill(2400,1.15,25,{
+   recentMetrics:{adr:90,kastPercent:76,openingDuelWinPercent:57,kd:1.15},
+   recentMetricSamples:{adr:25,kastPercent:25,openingDuelWinPercent:25,kd:25},
+ }).confidence,'recent-data');
 });
 
 test('monotonic Elo comparisons preserve increasing tier strength',()=>{
