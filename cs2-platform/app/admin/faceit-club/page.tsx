@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { requireUser, isAdmin } from '@/lib/auth';
 import { faceitConfigured } from '@/lib/faceit';
-import { NEXUS_FACEIT_CLUB_ID, NEXUS_FACEIT_CLUB_URL, NEXUS_FACEIT_TEST_MATCH_URL } from '@/lib/faceit-club';
+import { NEXUS_FACEIT_CLUB_ID, NEXUS_FACEIT_CLUB_URL, NEXUS_FACEIT_QUEUE_ID, NEXUS_FACEIT_QUEUE_URL, NEXUS_FACEIT_TEST_MATCH_URL } from '@/lib/faceit-club';
 import { FaceitClubClient } from './FaceitClubClient';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +28,8 @@ export default async function ClubInspectorPage() {
   return <FaceitClubClient
     clubId={NEXUS_FACEIT_CLUB_ID}
     clubUrl={NEXUS_FACEIT_CLUB_URL}
+    queueId={NEXUS_FACEIT_QUEUE_ID}
+    queueUrl={NEXUS_FACEIT_QUEUE_URL}
     initialMatchUrl={NEXUS_FACEIT_TEST_MATCH_URL}
     apiConfigured={faceitConfigured()}
   />;
