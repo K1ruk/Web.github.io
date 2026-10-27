@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useLocale } from '@/components/LocaleProvider';
+import { QueueHistoryClient } from './QueueHistoryClient';
 import type { FaceitMatchInspection, FaceitQueueSummary } from '@/lib/faceit-club';
 
 type QueueDiagnosis = {
@@ -227,9 +228,11 @@ export function FaceitClubClient({
           </div>}
         </section>
 
+        <QueueHistoryClient locale={mn ? 'mn' : 'en'} queueId={queueId} apiConfigured={apiConfigured}/>
+
         <div className="lab-card faceit-club-inspector">
           <div className="lab-panel-heading">
-            <span className="section-kicker">03 / {mn ? 'ТОГЛОЛТ ШАЛГАХ' : 'MATCHROOM INSPECTOR'}</span>
+            <span className="section-kicker">04 / {mn ? 'ТОГЛОЛТ ШАЛГАХ' : 'MATCHROOM INSPECTOR'}</span>
             <span className={'lab-status'+(apiConfigured?' enabled':' disabled')}>
               {apiConfigured ? 'FACEIT API READY' : 'FACEIT KEY REQUIRED'}
             </span>
@@ -276,7 +279,7 @@ export function FaceitClubClient({
 
         {result && <section className="lab-card faceit-club-results" aria-live="polite">
           <div className="lab-panel-heading">
-            <span className="section-kicker">04 / {mn?'FACEIT ТОГЛОЛТ':'LIVE FACEIT RESPONSE'}</span>
+            <span className="section-kicker">05 / {mn?'FACEIT ТОГЛОЛТ':'LIVE FACEIT RESPONSE'}</span>
             <span className={'lab-status'+(result.hasPlayerStats?' enabled':'')}>{result.status}</span>
           </div>
           <h2>{result.competitionName || (mn?'CS2 ТОГЛОЛТ':'CS2 MATCH')}</h2>
@@ -364,7 +367,7 @@ export function FaceitClubClient({
           </div>
           <div className="faceit-club-capability">
             <span className="faceit-club-state pending">04</span>
-            <div><strong>{mn?'Бүх тоглолтыг автоматаар татах':'Automatic queue match history'}</strong><p>{mn?'Тоглолтын түүхийн API баталгаажаагүй':'No verified queue match listing endpoint yet'}</p></div>
+            <div><strong>{mn?'Бүх тоглолтыг автоматаар татах':'Automatic queue match history'}</strong><p>{mn?'Hub match history туршилтын холболт нэмэгдсэн':'Hub match history route configured — check availability above'}</p></div>
           </div>
           <div className="faceit-club-capability">
             <span className="faceit-club-state pending">05</span>
