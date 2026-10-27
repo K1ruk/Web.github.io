@@ -15,7 +15,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(target);
   }
 
-  const target = new URL('/register', origin);
+  const returnTo = request.cookies.get('nexus_steam_after')?.value === 'onboarding' ? '/onboarding' : '/register';
+  const target = new URL(returnTo, origin);
   const params = new URL(request.url).searchParams;
   const stateCookie = request.cookies.get('nexus_steam_state')?.value || '';
   let problem: LinkResult | null = null;
@@ -92,6 +93,13 @@ export async function GET(request: NextRequest) {
   const response = NextResponse.redirect(target);
   response.headers.set('Cache-Control', 'no-store');
   // Delete using the SAME path used when the cookie was created.
+  response.cookies.set('nexus_steam_after', '', {
+    httpOnly: true,
+    secure: origin.startsWith('https://'),
+    sameSite: 'lax',
+    path: '/api/steam',
+    maxAge: 0,
+  });
   response.cookies.set('nexus_steam_state', '', {
     httpOnly: true,
     secure: origin.startsWith('https://'),
