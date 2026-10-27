@@ -642,3 +642,22 @@
 .faceit-player-raw summary{cursor:pointer;font:11px ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
 .faceit-player-raw pre{max-height:360px;overflow:auto;font:11px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;background:#00000050;color:#c7b4a9;border-radius:8px;padding:15px;margin-top:13px}
 .faceit-history-pages{font:11px ui-monospace,SFMono-Regular,Consolas,monospace;color:#a8a09a}
+
+
+/* First-tournament: verified pre-event Club baselines and admin team decisions */
+.admin-club-baseline{margin:20px 0 25px;padding:20px;border:1px solid #c18a604f;border-radius:13px;background:linear-gradient(135deg,#33201840,#0f101280)}
+.admin-club-baseline .row-space{align-items:flex-start;gap:16px}
+.admin-club-baseline .details-grid{margin:17px 0}
+.admin-baseline-identity{display:flex;flex-direction:column;gap:7px;margin:15px 0}
+.admin-baseline-identity strong{font-size:19px;letter-spacing:-.04em;color:#f1b98d}
+.admin-baseline-identity small{font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:#a9a49d;overflow-wrap:anywhere}
+.admin-roster-preview{margin:22px 0;padding:23px 0;border-top:1px solid #ffffff28}
+.admin-roster-preview>.row-space{gap:20px;align-items:flex-start}
+.admin-roster-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;margin:18px 0}
+.admin-roster-card{border:1px solid #ffffff25;border-radius:13px;padding:18px;background:linear-gradient(145deg,#22181480,#101011b8)}
+.admin-roster-card>.row-space{gap:12px;flex-wrap:wrap;margin:0 0 20px}
+.admin-roster-card>.row-space>strong{font-size:15px;color:#edd0bd;letter-spacing:.05em}
+.admin-roster-slot{border-top:1px solid #ffffff1d;padding:13px 0}
+.admin-roster-slot .field{margin:5px 0 10px;max-width:100%;font-size:12px}
+.admin-roster-slot .field-label{font-size:10px;letter-spacing:.06em}
+@media(max-width:650px){.admin-club-baseline{padding:14px}.admin-roster-card{padding:13px}}
