@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useLocale } from '@/components/LocaleProvider';
-import type { FaceitMatchInspection } from '@/lib/faceit-club';
+import type { FaceitMatchInspection, FaceitQueueSummary } from '@/lib/faceit-club';
 
 type Inspection = FaceitMatchInspection & {
   statsStatus: 'available' | 'not_found' | 'temporarily_unavailable';
@@ -18,10 +18,12 @@ function display(value: number | null | undefined, percent = false) {
 }
 
 export function FaceitClubClient({
-  clubId, clubUrl, initialMatchUrl, apiConfigured,
+  clubId, clubUrl, queueId, queueUrl, initialMatchUrl, apiConfigured,
 }: {
   clubId: string;
   clubUrl: string;
+  queueId: string;
+  queueUrl: string;
   initialMatchUrl: string;
   apiConfigured: boolean;
 }) {
@@ -31,6 +33,34 @@ export function FaceitClubClient({
   const [result, setResult] = useState<Inspection | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [queueLoading, setQueueLoading] = useState(false);
+  const [queueResult, setQueueResult] = useState<(FaceitQueueSummary & { apiAccess: 'granted' }) | null>(null);
+  const [queueError, setQueueError] = useState('');
+
+  async function checkQueueAccess() {
+    if (!apiConfigured || queueLoading) return;
+    setQueueLoading(true);
+    setQueueResult(null);
+    setQueueError('');
+    try {
+      const response = await fetch('/api/admin/faceit-club/queue', {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { Accept: 'application/json' },
+      });
+      const payload = await response.json().catch(() => null) as
+        | (FaceitQueueSummary & { apiAccess: 'granted'; error?: string }) | null;
+      if (!response.ok || !payload) {
+        throw new Error(payload?.error || 'FACEIT did not grant access to this queue.');
+      }
+      setQueueResult(payload);
+    } catch (failure) {
+      setQueueError(failure instanceof Error ? failure.message : 'FACEIT permission check failed.');
+    } finally {
+      setQueueLoading(false);
+    }
+  }
 
   async function inspect(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -87,9 +117,69 @@ export function FaceitClubClient({
             : 'This identifies the Club page, not a verified Hub or tournament connection. The public Data API does not document an automatic Club-match listing by this ID.'}</p>
         </div>
 
+        <section className="lab-card faceit-club-queue">
+          <div className="lab-panel-heading">
+            <span className="section-kicker">02 / {mn ? 'СОНГОСОН НЭГ QUEUE' : 'YOUR SELECTED CLUB QUEUE'}</span>
+            <span className={'lab-status' + (queueResult ? ' enabled' : '')}>
+              {queueResult ? 'API ACCESS GRANTED' : queueError ? 'ACCESS NOT VERIFIED' : 'AWAITING OWNER API CHECK'}
+            </span>
+          </div>
+          <p className="faceit-club-ref-label">CS2 QUEUE ID</p>
+          <strong className="faceit-club-id">{queueId}</strong>
+          <a className="faceit-club-go" href={queueUrl} target="_blank" rel="noopener noreferrer">
+            {mn ? 'FACEIT QUEUE НЭЭХ' : 'OPEN THIS FACEIT QUEUE'} <span aria-hidden="true">↗</span>
+          </a>
+          <p className="faceit-club-note">{mn
+            ? 'Энэ бол таны сонгосон ганц queue. FACEIT queue owner API-г зөвшөөрсөн эсэхийг таны хувийн серверийн API түлхүүрээр шалгана.'
+            : 'Only this one queue is configured. As its owner, you can check whether the NEXUS server API key has organizer-restricted access to its details.'}</p>
+
+          <button type="button" className="lab-run-button faceit-queue-probe"
+            disabled={!apiConfigured || queueLoading} onClick={checkQueueAccess}>
+            <span>{queueLoading ? (mn ? 'FACEIT ЭРХ ШАЛГАЖ БАЙНА...' : 'CHECKING FACEIT PERMISSIONS...')
+              : (mn ? 'QUEUE API ЭРХ ШАЛГАХ' : 'CHECK OWNER QUEUE API ACCESS')}</span>
+            <span aria-hidden="true">↗</span>
+          </button>
+          {!apiConfigured && <div className="faceit-club-unverified" role="status">
+            <strong>FACEIT_API_KEY REQUIRED</strong>
+            <p>{mn
+              ? 'Энэ шалгалтыг хийхийн тулд FACEIT API түлхүүрээ NEXUS серверт тохируулна уу.'
+              : 'Set the private FACEIT_API_KEY on your NEXUS server, then check organizer permissions here. Do not share your key in chat or store it in the browser.'}</p>
+          </div>}
+          {queueError && <div className="faceit-club-unverified" role="alert">
+            <strong>{mn ? 'FACEIT QUEUE API ЭРХ БАТЛАГДААГҮЙ' : 'FACEIT QUEUE API PERMISSION NOT CONFIRMED'}</strong>
+            <p>{queueError}</p>
+            <p>{mn
+              ? 'FACEIT Club-ийн owner байх нь Developer API түлхүүрт автоматаар эрх өгдөг гэсэн үг биш.'
+              : 'Being the Club or queue owner does not necessarily grant organizer permissions to an unrelated developer API key. FACEIT Developer Support may need to authorize it.'}</p>
+          </div>}
+          {queueResult && <div className="faceit-club-queue-result" aria-live="polite">
+            <div className="faceit-club-queue-name">
+              <small>{mn ? 'FACEIT-ЭЭС ИРСЭН QUEUE' : 'QUEUE RETURNED BY FACEIT'}</small>
+              <strong>{queueResult.name || 'Unnamed CS2 queue'}</strong>
+            </div>
+            <div className="faceit-club-meta">
+              <span>GAME <strong>{queueResult.game.toUpperCase()}</strong></span>
+              <span>REGION <strong>{queueResult.region || '—'}</strong></span>
+              <span>STATE <strong>{queueResult.state || (queueResult.open === null ? '—' : queueResult.open ? 'Open' : 'Closed')}</strong></span>
+              <span>ENTITY TYPE <strong>{queueResult.entityType || '—'}</strong></span>
+              <span>ENTITY ID <strong>{queueResult.entityId || '—'}</strong></span>
+              <span>ELO ENABLED <strong>{queueResult.calculateElo === null ? '—' : queueResult.calculateElo ? 'YES' : 'NO'}</strong></span>
+            </div>
+            <div className="faceit-club-unverified" role="status">
+              <strong>{mn ? 'API ЭРХТЭЙ — ТОГЛОЛТЫН ТҮҮХ ОДООГООР БИШ' : 'QUEUE DETAILS ACCESSIBLE — MATCH HISTORY NOT YET AVAILABLE'}</strong>
+              <p>{mn
+                ? 'FACEIT энэ queue-ийн мэдээллийг серверийн түлхүүрт өгсөн. Гэхдээ queue-ийн бүх тоглолтыг жагсаах API, мөн FACEIT owner нэвтрэлтийг одоогоор баталгаажаагүй.'
+                : 'FACEIT accepted the NEXUS server key for this specific queue details endpoint. This does not authenticate the signed-in user as the FACEIT owner and does not mean FACEIT exposed an automatic queue match-history feed.'}</p>
+              {queueResult.entityIdMatchesProvidedClub && <p>{mn
+                ? 'FACEIT-ийн entity ID өгсөн Club ID-тэй таарч байна.'
+                : 'The provider queue entity ID matches your supplied Club ID.'}</p>}
+            </div>
+          </div>}
+        </section>
+
         <div className="lab-card faceit-club-inspector">
           <div className="lab-panel-heading">
-            <span className="section-kicker">02 / {mn ? 'ТОГЛОЛТ ШАЛГАХ' : 'MATCHROOM INSPECTOR'}</span>
+            <span className="section-kicker">03 / {mn ? 'ТОГЛОЛТ ШАЛГАХ' : 'MATCHROOM INSPECTOR'}</span>
             <span className={'lab-status'+(apiConfigured?' enabled':' disabled')}>
               {apiConfigured ? 'FACEIT API READY' : 'FACEIT KEY REQUIRED'}
             </span>
@@ -136,7 +226,7 @@ export function FaceitClubClient({
 
         {result && <section className="lab-card faceit-club-results" aria-live="polite">
           <div className="lab-panel-heading">
-            <span className="section-kicker">03 / {mn?'FACEIT ТОГЛОЛТ':'LIVE FACEIT RESPONSE'}</span>
+            <span className="section-kicker">04 / {mn?'FACEIT ТОГЛОЛТ':'LIVE FACEIT RESPONSE'}</span>
             <span className={'lab-status'+(result.hasPlayerStats?' enabled':'')}>{result.status}</span>
           </div>
           <h2>{result.competitionName || (mn?'CS2 ТОГЛОЛТ':'CS2 MATCH')}</h2>
@@ -214,11 +304,16 @@ export function FaceitClubClient({
             <div><strong>{mn?'Тоглолтын API':'Match API'}</strong><p>{mn?'Нэг matchroom-ын мэдээллийг унших боломжтой':'Official match details and player stats by match ID'}</p></div>
           </div>
           <div className="faceit-club-capability">
-            <span className="faceit-club-state pending">03</span>
-            <div><strong>{mn?'Бүх тоглолтыг автоматаар татах':'Automatic Club sync'}</strong><p>{mn?'Одоогоор баталгаажаагүй':'Club queue-to-match listing not verified'}</p></div>
+            <span className={'faceit-club-state '+(queueResult?'available':'pending')}>03</span>
+            <div><strong>{mn?'Зөвхөн энэ queue-ийн owner API':'Selected queue / owner API'}</strong>
+              <p>{queueResult?'Queue details accessible':queueError?'FACEIT API did not confirm access':'Check permissions using the private API key'}</p></div>
           </div>
           <div className="faceit-club-capability">
             <span className="faceit-club-state pending">04</span>
+            <div><strong>{mn?'Бүх тоглолтыг автоматаар татах':'Automatic queue match history'}</strong><p>{mn?'Тоглолтын түүхийн API баталгаажаагүй':'No verified queue match listing endpoint yet'}</p></div>
+          </div>
+          <div className="faceit-club-capability">
+            <span className="faceit-club-state pending">05</span>
             <div><strong>{mn?'Тэмцээний үр дүн шинэчлэх':'League result importing'}</strong><p>{mn?'Энэ хэсэг зөвхөн унших горимтой':'Read-only diagnostic; no NEXUS tournament write'}</p></div>
           </div>
         </div>
