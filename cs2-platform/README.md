@@ -90,6 +90,45 @@ Create a server-side FACEIT Data API key at https://developers.faceit.com/ (see 
 
 **Payment confirmation occurs only after verified Stripe webhooks.** Returning to the success page never marks a player paid.
 
+## FACEIT Club queue match-history discovery (Hub competition route)
+
+FACEIT returned the following fields for the **real** matchroom submitted by
+the Club owner:
+
+- Matchroom: `https://www.faceit.com/en/cs2/room/1-1aaee7dd-bf23-44b6-b043-a96fc7586ce9`
+- `competition_id`: `26ca1fb5-eb37-4b3c-9005-402eca7a9008`
+- `competition_type`: `hub`
+- `organizer_id`: `3dc2f9c9-1f41-4e1d-bcca-37256ceb2786`
+
+The competition ID **exactly matches** the single selected Club queue ID,
+so this match is attributable to that queue competition. This does not
+authenticate the FACEIT owner or mean the new Club queue is addressable as
+an old-style Hub resource.
+
+**New integration route (requires live verification):**
+
+`GET /hubs/26ca1fb5-eb37-4b3c-9005-402eca7a9008/matches?type=past&offset=0&limit=50`
+
+FACEIT officially documents Hub match lists with pagination (1–100 per
+request). `/admin/faceit-club` includes **TEST HUB HISTORY (FIRST 50)**, then
+**SCAN AVAILABLE QUEUE HISTORY** for a bounded foreground scan. NEXUS checks
+every returned match for `competition_id` equal to the selected queue UUID,
+`competition_type=hub`, and `game=cs2`. Unrelated or malformed matches are
+rejected. The UI exposes rejected counts, page count, and whether the known
+sample matchroom was located; the user can stop scanning and export a
+CSV of retrieved results. It stops at the end of FACEIT pagination or a
+100-page / 10,000-match safety cap. A 404 is reported as
+**Hub endpoint not exposed** and does not imply an empty queue.
+
+This history feature makes a bounded **admin-triggered live read** through
+the FACEIT Data API. It does **not** yet persist matches, calculate league
+standings from them, trigger automatically on a schedule, or collect per-player
+stats for every historical match; the existing individual match inspector
+can retrieve available per-match player statistics separately. Only after
+confirming that the live Hub history endpoint works for this Club queue
+should we implement idempotent, admin-approved database ingestion and
+scheduled ongoing synchronization.
+
 ## FACEIT Club reference and match diagnostics
 
 NEXUS has a reference to the supplied Club page:
@@ -151,9 +190,12 @@ to verified NEXUS administrators and always returns `no-store` responses.
 **Important limits:** This Club ID is *not* assumed to be an old FACEIT Hub ID
 or competition ID. Public FACEIT Data API documentation currently exposes
 Hub, tournament, and match endpoints, but does not document a method for
-enumerating all matches in a Club by Club ID. A public matchroom alone does
-not prove association with the supplied Club. The inspector explicitly
-labels Club membership **unverified** and never writes an imported result,
+enumerating all matches in a Club by Club ID. A pasted match URL alone
+does not prove association, but FACEIT's returned `competition_id` and
+`competition_type` can confirm a match belongs to the **selected queue
+competition** when they exactly match the configured ID and `hub` type.
+FACEIT account ownership is still unverified, and the inspector never
+writes an imported result,
 tournament standing or player rating to NEXUS. Actual Club-to-match
 discovery, ownership verification and automated synchronization require
 additional verified provider support or organizer-provided competition
