@@ -39,3 +39,56 @@ test('monotonic Elo comparisons preserve increasing tier strength',()=>{
    if(i>0){assert.ok(r.score>ratings[i-1].score);assert.ok(r.tier>=ratings[i-1].tier);}
  });
 });
+
+
+test('deliberately bad recent K/D never earns an easier tier', () => {
+  const baseline=provisionalSkill(2200,null,0);
+  const badStreak=provisionalSkill(2200,0.18,30);
+  assert.equal(badStreak.score,baseline.score);
+  assert.equal(badStreak.tier,baseline.tier);
+  assert.equal(badStreak.performanceBonus,0);
+});
+
+test('previous observed Elo protects a rating when current Elo falls sharply', () => {
+  const current=provisionalSkill(1400,0.4,30);
+  const protectedRating=provisionalSkill(1400,0.4,30,{historicalPeakElo:2300});
+  assert.equal(protectedRating.protectedElo,2150);
+  assert.ok(protectedRating.score>current.score);
+  assert.ok(protectedRating.reviewFlags.includes('historical_elo_drop'));
+  assert.equal(protectedRating.reviewRequired,true);
+});
+
+test('legitimate small Elo changes are allowed without an integrity flag', () => {
+  const result=provisionalSkill(2130,1.05,30,{historicalPeakElo:2210});
+  assert.equal(result.protectedElo,2130);
+  assert.equal(result.reviewFlags.includes('historical_elo_drop'),false);
+});
+
+test('the system never claims to know a peak when it has no snapshot', () => {
+  const result=provisionalSkill(1100,1.1,25);
+  assert.equal(result.historicalPeakElo,null);
+  assert.equal(result.protectedElo,1100);
+});
+
+test('unusually strong statistics trigger review, not automatic punishment', () => {
+  const result=provisionalSkill(1100,1.8,25,{lifetimeMatches:260,lifetimeKd:1.62});
+  assert.equal(result.reviewRequired,true);
+  assert.ok(result.reviewFlags.includes('recent_performance_mismatch'));
+  assert.ok(result.reviewFlags.includes('lifetime_performance_mismatch'));
+  assert.ok(result.score>=0&&result.score<=100);
+});
+
+test('limited history triggers a review signal without inventing player guilt', () => {
+  const result=provisionalSkill(2000,null,0,{lifetimeMatches:8});
+  assert.ok(result.reviewFlags.includes('limited_faceit_history'));
+  assert.equal(result.performanceBonus,0);
+});
+
+test('invalid historical Elo cannot inflate or poison the calculation', () => {
+  const current=provisionalSkill(1950,null,0);
+  for (const prior of [-100,10001,Number.NaN]) {
+    const result=provisionalSkill(1950,null,0,{historicalPeakElo:prior});
+    assert.equal(result.score,current.score);
+    assert.equal(result.historicalPeakElo,null);
+  }
+});
