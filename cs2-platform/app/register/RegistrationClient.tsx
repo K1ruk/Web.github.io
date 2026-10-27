@@ -1,27 +1,286 @@
 'use client';
-import {FormEvent,useState} from 'react';import {useRouter,useSearchParams} from 'next/navigation';import Link from 'next/link';import {useLocale} from '@/components/LocaleProvider';
-type Profile={nickname:string;primary_role:string|null;secondary_role:string|null;preferred_language:string}|null;
-type Tournament={id:string;name:string;fee_cents:number;currency:string;capacity:number;status:string};
-const roles=['AWPer','IGL','Entry Fragger','Rifler','Support','Lurker'];
-async function post(path:string,body:unknown){const res=await fetch(path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await res.json();if(!res.ok)throw new Error(data.error||'Request failed');return data;}
-export function RegistrationClient({profile,steamId,tournaments,registrations}:{profile:Profile;steamId:string|null;tournaments:Tournament[];registrations:{tournament_id:string;status:string}[]}){
- const {locale}=useLocale(),mn=locale==='mn';const router=useRouter();const params=useSearchParams();
- const [nick,setNick]=useState(profile?.nickname||''),[primary,setPrimary]=useState(profile?.primary_role||'Rifler'),[secondary,setSecondary]=useState(profile?.secondary_role||'Support'),[language,setLanguage]=useState(profile?.preferred_language||locale),[selected,setSelected]=useState(tournaments[0]?.id||''),[accepted,setAccepted]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
- const already=registrations.find(r=>r.tournament_id===selected&&['paid','pending_payment'].includes(r.status));
- const steamFailureMessages:Record<string,[string,string]>={
-  session:['NEXUS session expired. Sign in again, then link Steam.','NEXUS нэвтрэлт дууссан байна. Дахин нэвтэрч Steam хаягаа холбоно уу.'],
-  state:['Steam verification session expired or cookies were blocked. Try again from this page.','Steam баталгаажуулалт дууссан эсвэл cookie хаагдсан. Энэ хуудаснаас дахин оролдоно уу.'],
-  locked:['Steam cannot be changed during an active tournament registration.','Тэмцээний бүртгэл идэвхтэй үед Steam хаягаа сольж болохгүй.'],
-  duplicate:['That Steam account is already connected to a different NEXUS account.','Энэ Steam хаяг өөр NEXUS хаягтай холбогдсон байна.'],
-  verification:['Steam did not confirm account ownership. Sign in to Steam and try again.','Steam хаягийн эзэмшлийг баталгаажуулж чадсангүй. Steam-д нэвтэрч дахин оролдоно уу.'],
-  credentials:['Supabase rejected the private server key. Open Supabase → Settings → API Keys and put the correct sb_secret_ key in cs2-platform/.env.local as SUPABASE_SECRET_KEY. Restart the dev server, then try again.','Supabase серверийн нууц түлхүүрийг зөвшөөрсөнгүй. Supabase → Settings → API Keys хэсгээс зөв sb_secret_ түлхүүрийг .env.local файлд оруулаад серверийг дахин асаана уу.'],
-  setup:['Steam linking is not configured on the server yet. Add the private Supabase server key.','Steam холболтын серверийн тохиргоо дутуу байна.'],
-  origin:['You started Steam linking from a different website address. Use the local or official preview URL.','Steam холболтыг өөр вэб хаягаас эхлүүлсэн байна. Зөв хаягаас дахин оролдоно уу.'],
-  service:['Could not save your Steam link. Please try again later.','Steam хаягийг хадгалж чадсангүй. Дараа дахин оролдоно уу.']
- };
- const steamReason=params.get('reason')||'';
- const steamError=steamFailureMessages[steamReason]||steamFailureMessages.service;
- async function save(e:FormEvent){e.preventDefault();setBusy(true);setMessage('');try{await post('/api/profile',{nickname:nick,primary_role:primary,secondary_role:secondary,preferred_language:language});setMessage(mn?'Профайл хадгалагдлаа.':'Profile saved.');router.refresh();}catch(e){setMessage(e instanceof Error?e.message:'Error');}finally{setBusy(false);}}
- async function checkout(){setBusy(true);setMessage('');try{const result=await post('/api/checkout',{tournamentId:selected,acceptedRules:accepted});if(result.url&&new URL(result.url).hostname.endsWith('stripe.com'))window.location.assign(result.url);else throw new Error('Unexpected checkout redirect');}catch(e){setMessage(e instanceof Error?e.message:'Error');setBusy(false);}}
- return <main className="content-page"><div className="section-kicker">REGISTRATION / 01</div><h1 className="page-heading">{mn?'БҮРТГЭЛ':'REGISTER'}</h1><p className="lead">{mn?'Нэр, үүрэг болон Steam хаягаа баталгаажуул.':'Set your profile, preferred roles and verified Steam account.'}</p><div className="two-col margin-top"><div className="panel"><div className="section-kicker">01 / PROFILE</div><form onSubmit={save} className="margin-top"><div className="form-row"><label className="field-label">CS2 NICKNAME</label><input required maxLength={32} minLength={2} className="field" value={nick} onChange={e=>setNick(e.target.value)}/></div><div className="form-row"><label className="field-label">{mn?'ҮНДСЭН ҮҮРЭГ':'PRIMARY ROLE'}</label><select className="field" value={primary} onChange={e=>{setPrimary(e.target.value);if(e.target.value===secondary)setSecondary(roles.find(r=>r!==e.target.value)||'Support');}}>{roles.map(r=><option key={r}>{r}</option>)}</select></div><div className="form-row"><label className="field-label">{mn?'ХОЁРДОГЧ ҮҮРЭГ':'SECONDARY ROLE'}</label><select className="field" value={secondary} onChange={e=>setSecondary(e.target.value)}>{roles.filter(r=>r!==primary).map(r=><option key={r}>{r}</option>)}</select></div><div className="form-row"><label className="field-label">{mn?'ХЭЛ':'LANGUAGE'}</label><select className="field" value={language} onChange={e=>setLanguage(e.target.value)}><option value="en">English</option><option value="mn">Монгол</option></select></div><button className="outline-button" type="submit" disabled={busy||!!already}>{mn?'ПРОФАЙЛ ХАДГАЛАХ':'SAVE PROFILE'}<span className="button-line"/></button></form><div className="steam-link-card margin-top"><div className="row-space"><span className="section-kicker">02 / STEAM</span><span className={'pill '+(steamId?'orange':'')}>{steamId?(mn?'БАТАЛГААЖСАН':'VERIFIED'):(mn?'ХОЛБОГДООГҮЙ':'NOT LINKED')}</span></div><p className="small-text">{steamId?'Steam ID · '+steamId:(mn?'Тэмцээнд оролцохын тулд Steam хаягийн эзэмшлээ баталгаажуулна уу.':'Verify that you own your Steam account before joining a tournament.')}</p>{!steamId&&<a className="outline-button" href="/api/steam/start">{mn?'STEAM ХАЯГ ХОЛБОХ':'CONNECT STEAM'}<span className="button-line"/></a>}{params.get('steam')==='linked'&&<p className="success small-text" role="status">{mn?'Steam хаяг амжилттай холбогдлоо.':'Steam account linked successfully.'}</p>}{params.get('steam')==='failed'&&<p className="steam-link-error" role="alert">{mn?steamError[1]:steamError[0]}</p>}</div></div><div className="panel"><div className="section-kicker">02 / TOURNAMENT</div><div className="margin-top form-row"><label className="field-label">{mn?'ТЭМЦЭЭН':'SELECT EVENT'}</label><select className="field" value={selected} onChange={e=>setSelected(e.target.value)} disabled={!tournaments.length}>{tournaments.length?tournaments.map(t=><option value={t.id} key={t.id}>{t.name}</option>):<option value="">{mn?'Нээлттэй тэмцээн алга':'NO OPEN TOURNAMENTS'}</option>}</select></div>{tournaments.filter(t=>t.id===selected).map(t=><div key={t.id} className="details-grid"><div className="details-cell"><small>ENTRY FEE</small><strong>{new Intl.NumberFormat('en',{style:'currency',currency:t.currency}).format(t.fee_cents/100)}</strong></div><div className="details-cell"><small>PLAYER CAPACITY</small><strong>{t.capacity}</strong></div></div>)}<p className="small-text margin-top">{mn?'Төлбөр Stripe-ийн хамгаалалттай хуудсаар хийгдэнэ.':'Secure payment via Stripe Checkout. Registration is only confirmed after the verified payment webhook.'}</p><label className="row-wrap small-text margin-top"><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)}/><span>{mn?'Тэмцээний дүрэм, төлбөр буцаах нөхцөлийг зөвшөөрч байна.':'I agree to the tournament rules and refund policy.'}</span></label><p className="small-text">{process.env.NEXT_PUBLIC_TOURNAMENT_RULES_URL?<a className="text-link" href={process.env.NEXT_PUBLIC_TOURNAMENT_RULES_URL} target="_blank" rel="noopener noreferrer">TOURNAMENT RULES</a>:'Tournament rules link pending'} · {process.env.NEXT_PUBLIC_REFUND_POLICY_URL?<a className="text-link" href={process.env.NEXT_PUBLIC_REFUND_POLICY_URL} target="_blank" rel="noopener noreferrer">REFUND POLICY</a>:'Refund policy link pending'}</p><button className="outline-button margin-top" onClick={checkout} disabled={!selected||!steamId||!accepted||!!already||busy}>{already?(already.status==='paid'?'ALREADY REGISTERED':'PAYMENT PENDING'):(mn?'ТӨЛБӨР ТӨЛӨХ':'GO TO CHECKOUT')}<span className="button-line"/></button><p className="small-text margin-top"><Link href="/dashboard">MY REGISTRATIONS</Link></p></div></div>{message&&<p className={'form-message margin-top '+(message.includes('saved')?'success':'')} role="status">{message}</p>}</main>;
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useLocale } from '@/components/LocaleProvider';
+import {
+  activePayment, confirmedEntry, displayFee, entryAvailability, profileIsReady,
+  type PlayerProfile, type PlayerRegistration, type PublicTournament,
+} from '@/lib/registration';
+
+type Props = {
+  profile: PlayerProfile;
+  steamId: string | null;
+  tournaments: PublicTournament[];
+  registrations: PlayerRegistration[];
+  rulesUrl: string | null;
+  refundUrl: string | null;
+  paymentsEnabled: boolean;
+  now: number;
+};
+
+const steamErrors: Record<string, [string, string]> = {
+  session: ['NEXUS session expired. Sign in again, then reconnect Steam.', 'NEXUS нэвтрэлт дууссан байна. Дахин нэвтэрнэ үү.'],
+  state: ['Steam verification expired or cookies were blocked. Please retry.', 'Steam баталгаажуулалт дууссан. Дахин оролдоно уу.'],
+  locked: ['Steam cannot be changed during an active registration.', 'Идэвхтэй бүртгэлийн үед Steam солих боломжгүй.'],
+  duplicate: ['This Steam account is already linked to another NEXUS account.', 'Энэ Steam өөр NEXUS хаягтай холбогдсон байна.'],
+  verification: ['Steam could not confirm this account. Try again.', 'Steam баталгаажуулж чадсангүй. Дахин оролдоно уу.'],
+  credentials: ['Supabase rejected the server key. Contact the tournament administrator.', 'Supabase серверийн тохиргоог шалгана уу.'],
+  setup: ['Steam linking is not configured yet.', 'Steam холболтын тохиргоо дутуу байна.'],
+  origin: ['Steam was opened from another website. Please retry here.', 'Steam-ийг өөр вэб хаягаас нээсэн байна.'],
+  service: ['Could not finish Steam linking. Please try again.', 'Steam холболт амжилтгүй. Дахин оролдоно уу.'],
+};
+
+function eventStatus(status: string, availability: string, mn: boolean) {
+  if (status === 'published') return mn ? 'БАГУУД ГАРСАН' : 'TEAMS RELEASED';
+  if (status === 'finished') return mn ? 'ДУУССАН' : 'COMPLETED';
+  if (availability === 'full') return mn ? 'ДҮҮРСЭН' : 'FULL';
+  if (availability === 'open') return mn ? 'БҮРТГЭЛ НЭЭЛТТЭЙ' : 'REGISTRATION OPEN';
+  return mn ? 'ХААГДСАН' : 'CLOSED';
+}
+
+function readableDate(value: string | null, locale: 'en' | 'mn') {
+  if (!value) return null;
+  const time = Date.parse(value);
+  if (!Number.isFinite(time)) return null;
+  return new Intl.DateTimeFormat(locale === 'mn' ? 'mn-MN' : 'en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
+    timeZoneName: 'short',
+  }).format(time);
+}
+
+export function RegistrationClient({
+  profile, steamId, tournaments, registrations, rulesUrl, refundUrl, paymentsEnabled, now,
+}: Props) {
+  const { locale } = useLocale();
+  const mn = locale === 'mn';
+  const params = useSearchParams();
+  const urlEvent = params.get('event');
+  const [selected, setSelected] = useState(
+    tournaments.find(event => event.slug === urlEvent)?.id ||
+    tournaments.find(event => entryAvailability(event, now) === 'open')?.id ||
+    tournaments[0]?.id || '',
+  );
+  const [accepted, setAccepted] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const event = tournaments.find(item => item.id === selected) || null;
+  const availability = event ? entryAvailability(event, now) : 'closed';
+  const playerReady = profileIsReady(profile);
+  const steamReady = !!steamId;
+  const registration = registrations.find(item => item.tournament_id === selected);
+  const alreadyPaid = confirmedEntry(registration);
+  const pending = activePayment(registration, now);
+  const rulesReady = !!rulesUrl && !!refundUrl;
+  const entryReady = !!event && availability === 'open' && playerReady && steamReady
+    && rulesReady && paymentsEnabled && !alreadyPaid;
+  const canCheckout = entryReady && accepted && !busy;
+  const paidRegistrations = registrations.filter(reg => reg.status === 'paid').length;
+
+  let blocker: string | null = null;
+  if (!event) blocker = mn ? 'Одоогоор нээлттэй тэмцээн байхгүй.' : 'No tournaments have been announced yet.';
+  else if (alreadyPaid) blocker = mn ? 'Та энэ тэмцээнд бүртгүүлсэн.' : 'You already have a confirmed place in this event.';
+  else if (availability === 'full') blocker = mn ? 'Энэ тэмцээний суудал дүүрсэн.' : 'All confirmed places are taken.';
+  else if (availability !== 'open') blocker = mn ? 'Энэ тэмцээний бүртгэл хаагдсан.' : 'Registration is not open for this event.';
+  else if (!steamReady) blocker = mn ? 'Эхлээд Steam хаягаа баталгаажуулна уу.' : 'Connect your Steam account before entering.';
+  else if (!playerReady) blocker = mn ? 'Тоглогчийн профайлаа бүрэн бөглөнө үү.' : 'Complete your nickname and preferred roles in My Account.';
+  else if (!rulesReady) blocker = mn ? 'Тэмцээний дүрэм, буцаалтын нөхцөл хараахан нийтлэгдээгүй.' : 'Registration opens after the tournament rules and refund policy are published.';
+  else if (!paymentsEnabled) blocker = mn ? 'Төлбөрийн систем хараахан идэвхжээгүй байна.' : 'Checkout is not configured yet. No payment can be taken.';
+  else if (!accepted) blocker = mn ? 'Үргэлжлүүлэхийн тулд дүрэм, нөхцөлийг зөвшөөрнө үү.' : 'Review and accept the tournament rules to continue.';
+
+  async function checkout() {
+    if (!canCheckout || !event) return;
+    setBusy(true);
+    setErrorMessage('');
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId: event.id, acceptedRules: true }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || 'Unable to start checkout');
+
+      // Stripe-hosted checkout only. Reject unexpected third-party redirects.
+      const nextUrl = new URL(body?.url);
+      if (nextUrl.protocol !== 'https:' || nextUrl.hostname !== 'checkout.stripe.com') {
+        throw new Error('The checkout provider returned an unexpected destination.');
+      }
+      window.location.assign(nextUrl.toString());
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Unable to start checkout');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="content-page entry-page">
+      <div className="entry-overline">
+        <span className="section-kicker">NEXUS / {mn ? 'ТЭМЦЭЭН' : 'TOURNAMENTS'}</span>
+        <span className="entry-top-code">CS2 — SOLO ENTRY / 2026</span>
+      </div>
+
+      <header className="entry-header">
+        <div>
+          <h1>{mn ? 'Тэмцээнд оролц.' : 'Enter the arena'}<span>.</span></h1>
+          <p>{mn ? 'Тэмцээнээ сонгож, бүртгэлийн мэдээллээ шалга. Бид багийг ур чадварт тулгуурлан бүрдүүлнэ.' : 'Choose your tournament, review your player details and secure a place in the next NEXUS competition.'}</p>
+        </div>
+        <Link className="entry-profile-link" href="/dashboard">
+          <span className="entry-profile-monogram">{(profile?.nickname || 'NX').slice(0,2).toUpperCase()}</span>
+          <span><small>{mn ? 'ТОГЛОГЧИЙН ПРОФАЙЛ' : 'PLAYER PROFILE'}</small><strong>{profile?.nickname || 'My Account'} <span aria-hidden="true">↗</span></strong></span>
+        </Link>
+      </header>
+
+      <div className="entry-flow-labels" aria-label={mn ? 'Бүртгэлийн алхмууд' : 'Registration steps'}>
+        <span><i>01</i>{mn ? 'ТЭМЦЭЭН СОНГОХ' : 'CHOOSE EVENT'}</span>
+        <span className="entry-flow-rule" aria-hidden="true"/>
+        <span><i>02</i>{mn ? 'МЭДЭЭЛЭЛ ШАЛГАХ' : 'VERIFY DETAILS'}</span>
+        <span className="entry-flow-rule" aria-hidden="true"/>
+        <span><i>03</i>{mn ? 'БҮРТГЭЛ БАТАЛГААЖУУЛАХ' : 'SECURE ENTRY'}</span>
+      </div>
+
+      {(params.get('checkout') === 'cancel' || params.get('steam') === 'linked' || params.get('steam') === 'failed') && (
+        <div className={'entry-notice' + (params.get('steam') === 'failed' ? ' danger' : '')} role="status">
+          {params.get('checkout') === 'cancel'
+            ? (mn ? 'Төлбөрийг цуцаллаа. Баталгаажсан бүртгэл үүсээгүй.' : 'Checkout cancelled. Your place is not confirmed.')
+            : params.get('steam') === 'linked'
+              ? (mn ? 'Steam хаяг амжилттай баталгаажлаа.' : 'Steam account verified. You can continue.')
+              : mn
+                ? (steamErrors[params.get('reason') || 'service'] || steamErrors.service)[1]
+                : (steamErrors[params.get('reason') || 'service'] || steamErrors.service)[0]}
+        </div>
+      )}
+
+      <div className="entry-layout">
+        <section className="entry-events" aria-labelledby="entry-events-title">
+          <div className="entry-section-head">
+            <div>
+              <span className="section-kicker">01 / {mn ? 'БОЛОМЖИТ ТЭМЦЭЭНҮҮД' : 'AVAILABLE COMPETITIONS'}</span>
+              <h2 id="entry-events-title">{mn ? 'Тэмцээн сонгох' : 'Choose your event'}<span>.</span></h2>
+            </div>
+            <small>{String(tournaments.length).padStart(2,'0')} {mn ? 'ТЭМЦЭЭН' : 'EVENTS'}</small>
+          </div>
+
+          {!tournaments.length ? (
+            <div className="entry-no-events">
+              <span className="entry-standby-emblem" aria-hidden="true">✳</span>
+              <span className="entry-standby-id">NX / STANDBY</span>
+              <h3>{mn ? 'Тун удахгүй.' : 'Next drop incoming.'}</h3>
+              <p>{mn ? 'Одоогоор тэмцээний бүртгэл нээгдээгүй байна. Шинэ тэмцээн нийтлэгдмэгц энд харагдана.' : 'No tournament has been announced yet. New competitions will appear here as soon as registration opens.'}</p>
+              <Link href="/dashboard" className="entry-standby-link">{mn ? 'МИНИЙ ПРОФАЙЛ' : 'VIEW YOUR PLAYER PROFILE'} <span aria-hidden="true">↗</span></Link>
+            </div>
+          ) : (
+            <div className="entry-event-list">
+              {tournaments.map(item => {
+                const state = entryAvailability(item, now);
+                const eventRegistration = registrations.find(reg => reg.tournament_id === item.id);
+                const chosen = item.id === selected;
+                return (
+                  <button key={item.id} className={'entry-event-card' + (chosen ? ' selected' : '')}
+                    type="button" aria-pressed={chosen}
+                    onClick={() => { setSelected(item.id); setAccepted(false); setErrorMessage(''); }}>
+                    <span className="entry-event-card-top">
+                      <span className="entry-event-tag">{item.slug.toUpperCase()}</span>
+                      <span className={'entry-event-status' + (state === 'open' ? ' open' : '')}>
+                        <span aria-hidden="true" className="entry-status-dot"/>
+                        {eventStatus(item.status, state, mn)}
+                      </span>
+                    </span>
+                    <strong className="entry-event-name">{item.name}</strong>
+                    <span className="entry-event-date">{item.starts_at
+                      ? (mn ? 'ЭХЛЭХ · ' : 'STARTS · ') + readableDate(item.starts_at, locale)
+                      : (mn ? 'ЭХЛЭХ ӨДӨР ТОВЛООГҮЙ' : 'DATE TO BE ANNOUNCED')}</span>
+                    <span className="entry-event-card-bottom">
+                      <span><small>{mn ? 'ОРОЛЦОХ ХУРААМЖ' : 'ENTRY FEE'}</small><b>{displayFee(item.fee_cents, item.currency, locale)}</b></span>
+                      <span><small>{mn ? 'БАТАЛГААЖСАН ТОГЛОГЧ' : 'CONFIRMED PLAYERS'}</small><b>{item.confirmed} <em>/ {item.capacity}</em></b></span>
+                      <span className="entry-card-select" aria-hidden="true">{chosen ? '✓' : '↗'}</span>
+                    </span>
+                    {confirmedEntry(eventRegistration) && <span className="entry-event-registered">{mn ? 'ТА БҮРТГҮҮЛСЭН' : 'YOUR ENTRY IS CONFIRMED'}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <aside className="entry-review" aria-labelledby="entry-review-title">
+          <div className="entry-review-heading">
+            <div><span className="section-kicker">02 / {mn ? 'МИНИЙ БҮРТГЭЛ' : 'YOUR ENTRY'}</span><h2 id="entry-review-title">{mn ? 'Бүртгэлийн мэдээлэл' : 'Review your entry'}</h2></div>
+            <span className="entry-review-mark">NX</span>
+          </div>
+
+          <div className="entry-review-identity">
+            <div className="entry-small-avatar" aria-hidden="true">{(profile?.nickname || 'NX').slice(0,2).toUpperCase()}</div>
+            <div><small>{mn ? 'ТОГЛОГЧ' : 'PLAYER'}</small><strong>{profile?.nickname || (mn ? 'Нэр сонгоогүй' : 'Not configured')}</strong></div>
+            <Link href="/dashboard" aria-label={mn ? 'Профайл засах' : 'Edit player profile'}>↗</Link>
+          </div>
+
+          <div className="entry-checklist">
+            <div className="entry-check-row">
+              <span className={'entry-check-icon' + (steamReady ? ' done' : '')}>{steamReady ? '✓' : '!'}</span>
+              <span><strong>STEAM</strong><small>{steamReady ? (mn ? 'БАТАЛГААЖСАН' : 'VERIFIED ACCOUNT') : (mn ? 'ХОЛБООГҮЙ' : 'NOT CONNECTED')}</small></span>
+              {!steamReady && <a href="/api/steam/start">{mn ? 'ХОЛБОХ' : 'CONNECT'} ↗</a>}
+            </div>
+            <div className="entry-check-row">
+              <span className={'entry-check-icon' + (playerReady ? ' done' : '')}>{playerReady ? '✓' : '!'}</span>
+              <span><strong>{mn ? 'ПРОФАЙЛ' : 'PLAYER PROFILE'}</strong><small>{playerReady ? (profile?.primary_role + ' / ' + profile?.secondary_role) : (mn ? 'НЭР БА ҮҮРЭГ ШААРДЛАГАТАЙ' : 'NICKNAME & ROLES REQUIRED')}</small></span>
+              {!playerReady && <Link href="/dashboard">{mn ? 'ЗАСАХ' : 'EDIT'} ↗</Link>}
+            </div>
+          </div>
+
+          <div className="entry-summary">
+            <span className="entry-summary-label">{mn ? 'СОНГОСОН ТЭМЦЭЭН' : 'SELECTED TOURNAMENT'}</span>
+            <strong className="entry-summary-name">{event?.name || '—'}</strong>
+            {event && <div className="entry-summary-meta">
+              <span>{mn ? 'ТӨЛӨВ' : 'STATUS'}</span>
+              <strong>{eventStatus(event.status, availability, mn)}</strong>
+            </div>}
+            {event?.registration_closes_at && <div className="entry-summary-meta">
+              <span>{mn ? 'БҮРТГЭЛ ХААГДАХ' : 'REGISTRATION CLOSES'}</span>
+              <strong>{readableDate(event.registration_closes_at, locale)}</strong>
+            </div>}
+            <div className="entry-summary-total">
+              <span>{mn ? 'НИЙТ' : 'ENTRY TOTAL'}</span>
+              <strong>{event ? displayFee(event.fee_cents, event.currency, locale) : '—'}</strong>
+            </div>
+            <p className="entry-summary-payment">{mn ? 'Stripe-ийн аюулгүй хуудсаар төлбөр төлнө. Төлбөр баталгаажсаны дараа таны оролцоо бүртгэгдэнэ.' : 'Payment is processed securely by Stripe. A place is only confirmed once payment is verified.'}</p>
+          </div>
+
+          {rulesReady && <label className="entry-consent">
+            <input type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} disabled={!entryReady || busy}/>
+            <span>{mn ? 'Би ' : 'I agree to the '}
+              <a href={rulesUrl!} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>{mn ? 'тэмцээний дүрэм' : 'tournament rules'}</a>
+              {mn ? ' болон ' : ' and '}
+              <a href={refundUrl!} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>{mn ? 'төлбөр буцаах нөхцөлийг' : 'refund policy'}</a>.
+            </span>
+          </label>}
+
+          <button className="entry-checkout" type="button" disabled={!canCheckout} onClick={checkout}>
+            <span>{busy ? (mn ? 'ТҮР ХҮЛЭЭНЭ ҮҮ' : 'OPENING CHECKOUT...')
+              : alreadyPaid ? (mn ? 'БҮРТГЭЛ БАТАЛГААЖСАН' : 'ENTRY CONFIRMED')
+                : pending ? (mn ? 'ТӨЛБӨР ҮРГЭЛЖЛҮҮЛЭХ' : 'RESUME CHECKOUT')
+                  : (mn ? 'ТӨЛБӨР ТӨЛӨХ' : 'CONTINUE TO CHECKOUT')}</span>
+            <span aria-hidden="true">↗</span>
+          </button>
+          {errorMessage && <p className="entry-review-error" role="alert">{errorMessage}</p>}
+          {blocker && <p className="entry-review-hint" role="status">{blocker}</p>}
+          {paidRegistrations > 0 && <Link className="entry-account-link" href="/dashboard">{mn ? 'МИНИЙ ТЭМЦЭЭНҮҮД' : 'VIEW MY ENTRIES'} ↗</Link>}
+        </aside>
+      </div>
+
+      <section className="entry-how" aria-labelledby="entry-how-title">
+        <span className="section-kicker">03 / {mn ? 'ҮЙЛ ЯВЦ' : 'THE FORMAT'}</span>
+        <h2 id="entry-how-title">{mn ? 'Хэрхэн ажилладаг вэ?' : 'How it works'}<span>.</span></h2>
+        <div className="entry-how-grid">
+          <div><span>01</span><strong>{mn ? 'БҮРТГҮҮЛЭХ' : 'SECURE YOUR PLACE'}</strong><p>{mn ? 'Steam хаягаа холбож, профайлаа бөглөөд тэмцээний оролцох эрхээ баталгаажуулна.' : 'Link Steam, complete your profile and confirm your entry through checkout.'}</p></div>
+          <div><span>02</span><strong>{mn ? 'УР ЧАДВАРЫН ҮНЭЛГЭЭ' : 'SKILL REVIEW'}</strong><p>{mn ? 'Зохион байгуулагч таны ур чадварыг шалгаж, түвшинг баталгаажуулна.' : 'Tournament admins review available skill data and approve player tiers.'}</p></div>
+          <div><span>03</span><strong>{mn ? 'БАГ БҮРДҮҮЛЭХ' : 'FIVE-PLAYER SQUADS'}</strong><p>{mn ? 'Тоглогчдын түвшин болон сонгосон үүрэгт үндэслэн тэнцвэртэй баг бүрдүүлнэ.' : 'Players are assigned into balanced five-person squads using roles and approved tiers.'}</p></div>
+        </div>
+      </section>
+    </main>
+  );
 }
