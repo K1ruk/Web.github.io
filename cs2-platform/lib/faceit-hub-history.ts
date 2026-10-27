@@ -17,6 +17,27 @@ export const FACEIT_HISTORY_MAX_OFFSET = 100000;
 export const FACEIT_HISTORY_FULL_SCAN_PAGE_SIZE = 50;
 export const FACEIT_HISTORY_MAX_AUTO_PAGES = 200;
 
+export type HubScanStatus =
+  | 'idle' | 'checking' | 'scanning' | 'complete'
+  | 'unavailable' | 'stopped' | 'partial' | 'error';
+
+/**
+ * Only an explicit full-scan attempt can unlock a partial archive.
+ * First-page previews alone must NEVER be presented as a complete archive.
+ */
+export function juneArchiveSaveMode(input: {
+  fullScanAttempted: boolean;
+  status: HubScanStatus;
+  hasFetchedJuneMatches: boolean;
+  more: boolean;
+}): 'complete' | 'partial' | 'blocked' {
+  if (!input.hasFetchedJuneMatches) return 'blocked';
+  if (input.status === 'complete' && !input.more) return 'complete';
+  if (input.fullScanAttempted
+    && ['partial', 'error', 'stopped'].includes(input.status)) return 'partial';
+  return 'blocked';
+}
+
 export type QueueHistoryMatch = {
   matchId: string;
   faceitUrl: string;
