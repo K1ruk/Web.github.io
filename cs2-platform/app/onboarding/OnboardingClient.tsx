@@ -157,8 +157,12 @@ export function OnboardingClient({ authenticated, discordConnected, steamId, pro
     const db = createBrowserClient(url, key);
     setBusy(true);
     try {
+      // Use the existing OAuth callback URL unchanged so the Supabase allowlist
+      // does not need a new query-string pattern just for the wizard.
+      document.cookie = 'nexus_setup_resume=1; Path=/auth; Max-Age=600; SameSite=Lax'
+        + (window.location.protocol === 'https:' ? '; Secure' : '');
       const options = {
-        redirectTo: window.location.origin + '/auth/callback?next=%2Fonboarding',
+        redirectTo: window.location.origin + '/auth/callback',
         scopes: 'identify email',
       };
       const { error } = authenticated
@@ -214,9 +218,16 @@ export function OnboardingClient({ authenticated, discordConnected, steamId, pro
           <section className="nx-onboard-content" aria-live="polite" aria-busy={!ready || busy}>
             <div className="nx-onboard-topline">
               <span>{step === 4 ? 'SYSTEM READY' : `SETUP / ${String(Math.min(step + 1, 4)).padStart(2,'0')}`}</span>
-              <Link href="/login" className="nx-onboard-existing">
-                {mn ? 'Бүртгэлтэй юу? Нэвтрэх' : 'Already have an account? Sign in'} <span aria-hidden="true">↗</span>
-              </Link>
+              <div className="nx-onboard-top-actions">
+                <div className="nx-onboard-locale" role="group" aria-label="Website language">
+                  <button type="button" className={mn?'':'selected'} onClick={()=>setLocale('en')} aria-pressed={!mn}>EN</button>
+                  <span>/</span>
+                  <button type="button" className={mn?'selected':''} onClick={()=>setLocale('mn')} aria-pressed={mn}>МН</button>
+                </div>
+                <Link href="/login" className="nx-onboard-existing">
+                  {mn ? 'Бүртгэлтэй юу? Нэвтрэх' : 'Already have an account? Sign in'} <span aria-hidden="true">↗</span>
+                </Link>
+              </div>
             </div>
             <div className="nx-onboard-progress" aria-label="Setup progress">
               {stages.map((stage, index) => <div key={stage.en} className={'nx-onboard-progress-item' + (step >= index ? ' complete' : '') + (step === index ? ' active' : '')}>
