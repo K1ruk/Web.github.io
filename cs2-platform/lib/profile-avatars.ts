@@ -44,7 +44,7 @@ export function discordAvatarFromMetadata(metadata: Record<string, unknown> | nu
  * presentation. Never use avatars to establish account ownership.
  */
 export async function steamAvatarFromId(steamId: string | null): Promise<string | null> {
-  if (!steamId || !/^\\d{17}$/.test(steamId)) return null;
+  if (!steamId || !/^\d{17}$/.test(steamId)) return null;
 
   const fallbackUrl = `https://unavatar.io/steam/profile:${steamId}`;
   const apiKey = process.env.STEAM_WEB_API_KEY?.trim();
