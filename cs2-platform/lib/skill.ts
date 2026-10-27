@@ -136,8 +136,12 @@ export function provisionalSkill(
     reviewFlags.push('opening_elo_mismatch');
 
   const availableRecent = (Object.keys(SKILL_BONUS_CAPS) as SkillArea[])
-    .filter(area => hasRecent((area === 'kast' ? 'kastPercent'
-      : area === 'opening' ? 'openingDuelWinPercent' : area)))
+    .filter(area => {
+      const key: MetricName = area === 'kast' ? 'kastPercent'
+        : area === 'opening' ? 'openingDuelWinPercent' : area;
+      return hasRecent(key, 10) && typeof recent[key] === 'number'
+        && Number.isFinite(recent[key]);
+    })
     .length;
   // Count meaningful samples, not just a returned HTTP 200. A single K/D
   // reading is insufficient evidence that advanced metrics exist.
