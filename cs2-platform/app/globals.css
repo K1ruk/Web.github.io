@@ -610,3 +610,16 @@
 .faceit-club-unverified.faceit-club-verified{border-color:#8ab99575;background:#6a9e7515}
 .faceit-club-unverified.faceit-club-verified strong{color:#b3d5b8}
 .faceit-club-unverified.faceit-club-verified p{color:#bccbbd}
+
+
+/* Admin-only June 2026+ persisted FACEIT archive */
+.faceit-club-archive{margin-top:28px;padding-top:25px;border-top:1px solid #ffffff2c}
+.faceit-club-archive h2{font-size:clamp(23px,2.7vw,34px);letter-spacing:-.05em;margin:21px 0 12px}
+.faceit-club-archive .faceit-history-status{margin-top:21px}
+.faceit-club-archive .faceit-history-actions{margin:23px 0}
+.faceit-club-archive .faceit-history-run{min-width:230px}
+.faceit-archive-table{margin-top:20px;min-width:650px}
+.faceit-archive-table td:nth-child(2){color:#f4b189;font-weight:800;font-size:16px}
+.faceit-archive-table td:last-child{font-size:10px;letter-spacing:.03em;color:#b3aea7}
+.faceit-club-archive .faceit-club-table-wrap{margin-top:18px;max-height:600px;overflow:auto;border:1px solid #ffffff23;border-radius:11px}
+.faceit-archive-table th{position:sticky;top:0;background:#151313;z-index:1}
