@@ -5,6 +5,25 @@ import Link from 'next/link';
 import { useLocale } from '@/components/LocaleProvider';
 import type { FaceitMatchInspection, FaceitQueueSummary } from '@/lib/faceit-club';
 
+type QueueDiagnosis = {
+  status: 'details_accessible' | 'listed_only' | 'inconclusive';
+  queue: FaceitQueueSummary | null;
+  detailLookup: 'found' | 'not_found';
+  listingChecks: Array<{
+    entityType: 'clan' | 'club' | 'hub';
+    outcome: 'matched' | 'not_listed' | 'not_found' | 'access_denied' | 'temporarily_unavailable' | 'invalid_response';
+  }>;
+  sampleMatch: {
+    id: string;
+    status: 'available' | 'not_found' | 'unavailable';
+    competitionId: string | null;
+    competitionType: string | null;
+    organizerId: string | null;
+  } | null;
+  note: string;
+  provider: 'FACEIT Data API';
+};
+
 type Inspection = FaceitMatchInspection & {
   statsStatus: 'available' | 'not_found' | 'temporarily_unavailable';
   source: 'FACEIT Data API';
@@ -34,7 +53,7 @@ export function FaceitClubClient({
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [queueLoading, setQueueLoading] = useState(false);
-  const [queueResult, setQueueResult] = useState<(FaceitQueueSummary & { apiAccess: 'granted' }) | null>(null);
+  const [queueResult, setQueueResult] = useState<QueueDiagnosis | null>(null);
   const [queueError, setQueueError] = useState('');
 
   async function checkQueueAccess() {
@@ -50,7 +69,7 @@ export function FaceitClubClient({
         headers: { Accept: 'application/json' },
       });
       const payload = await response.json().catch(() => null) as
-        | (FaceitQueueSummary & { apiAccess: 'granted'; error?: string }) | null;
+        | (QueueDiagnosis & { error?: string }) | null;
       if (!response.ok || !payload) {
         throw new Error(payload?.error || 'FACEIT did not grant access to this queue.');
       }
@@ -120,8 +139,11 @@ export function FaceitClubClient({
         <section className="lab-card faceit-club-queue">
           <div className="lab-panel-heading">
             <span className="section-kicker">02 / {mn ? 'СОНГОСОН НЭГ QUEUE' : 'YOUR SELECTED CLUB QUEUE'}</span>
-            <span className={'lab-status' + (queueResult ? ' enabled' : '')}>
-              {queueResult ? 'API ACCESS GRANTED' : queueError ? 'ACCESS NOT VERIFIED' : 'AWAITING OWNER API CHECK'}
+            <span className={'lab-status' + (queueResult?.status === 'details_accessible' || queueResult?.status === 'listed_only' ? ' enabled' : '')}>
+              {queueResult?.status === 'details_accessible' ? 'DETAILS API OK'
+                : queueResult?.status === 'listed_only' ? 'QUEUE FOUND IN LIST'
+                : queueResult?.status === 'inconclusive' ? '404 / INCONCLUSIVE'
+                : queueError ? 'ACCESS NOT VERIFIED' : 'READY FOR DIAGNOSTICS'}
             </span>
           </div>
           <p className="faceit-club-ref-label">CS2 QUEUE ID</p>
@@ -131,7 +153,7 @@ export function FaceitClubClient({
           </a>
           <p className="faceit-club-note">{mn
             ? 'Энэ бол таны сонгосон ганц queue. FACEIT queue owner API-г зөвшөөрсөн эсэхийг таны хувийн серверийн API түлхүүрээр шалгана.'
-            : 'Only this one queue is configured. As its owner, you can check whether the NEXUS server API key has organizer-restricted access to its details.'}</p>
+            : 'Only this one queue is configured. As its owner, you can test the server key against the documented queue API and filtered queue listing. A 404 alone does not prove a permission issue.'}</p>
 
           <button type="button" className="lab-run-button faceit-queue-probe"
             disabled={!apiConfigured || queueLoading} onClick={checkQueueAccess}>
@@ -154,25 +176,53 @@ export function FaceitClubClient({
           </div>}
           {queueResult && <div className="faceit-club-queue-result" aria-live="polite">
             <div className="faceit-club-queue-name">
-              <small>{mn ? 'FACEIT-ЭЭС ИРСЭН QUEUE' : 'QUEUE RETURNED BY FACEIT'}</small>
-              <strong>{queueResult.name || 'Unnamed CS2 queue'}</strong>
+              <small>{mn ? 'FACEIT API ШАЛГАЛТ' : 'FACEIT QUEUE API DIAGNOSTICS'}</small>
+              <strong>{queueResult.status === 'details_accessible'
+                ? (mn ? 'Queue мэдээлэл ирлээ' : 'Queue details accessible')
+                : queueResult.status === 'listed_only'
+                  ? (mn ? 'Queue жагсаалтаас олдсон' : 'Queue found in filtered list')
+                  : (mn ? '404 — шалтгаан тодорхойгүй' : '404 — cause still inconclusive')}</strong>
             </div>
-            <div className="faceit-club-meta">
-              <span>GAME <strong>{queueResult.game.toUpperCase()}</strong></span>
-              <span>REGION <strong>{queueResult.region || '—'}</strong></span>
-              <span>STATE <strong>{queueResult.state || (queueResult.open === null ? '—' : queueResult.open ? 'Open' : 'Closed')}</strong></span>
-              <span>ENTITY TYPE <strong>{queueResult.entityType || '—'}</strong></span>
-              <span>ENTITY ID <strong>{queueResult.entityId || '—'}</strong></span>
-              <span>ELO ENABLED <strong>{queueResult.calculateElo === null ? '—' : queueResult.calculateElo ? 'YES' : 'NO'}</strong></span>
+            <p className="faceit-club-diagnostic-note">{mn && queueResult.status === 'inconclusive'
+              ? 'FACEIT API 404 буцаасан. Энэ нь таны Club queue байхгүй эсвэл owner эрхгүй гэсэн баталгаа БИШ.'
+              : queueResult.note}</p>
+            {queueResult.queue && <div className="faceit-club-meta">
+              <span>GAME <strong>{queueResult.queue.game.toUpperCase()}</strong></span>
+              <span>QUEUE NAME <strong>{queueResult.queue.name || '—'}</strong></span>
+              <span>REGION <strong>{queueResult.queue.region || '—'}</strong></span>
+              <span>STATE <strong>{queueResult.queue.state || (queueResult.queue.open === null ? '—' : queueResult.queue.open ? 'Open' : 'Closed')}</strong></span>
+              <span>ENTITY TYPE <strong>{queueResult.queue.entityType || '—'}</strong></span>
+              <span>ENTITY ID <strong>{queueResult.queue.entityId || '—'}</strong></span>
+            </div>}
+            <div className="faceit-club-probe-results">
+              <p>DIRECT QUEUE DETAILS <strong>{queueResult.detailLookup === 'found' ? 'FOUND' : '404 NOT FOUND'}</strong></p>
+              {queueResult.listingChecks.length > 0 && <>
+                <p className="faceit-club-diagnostic-title">{mn ? 'КЛУБИЙН ID-ААР ХИЙСЭН ШАЛГАЛТ' : 'FILTERED QUEUE LOOKUPS (THIS CLUB ONLY)'}</p>
+                {queueResult.listingChecks.map(check => <p key={check.entityType}>
+                  <span>entity_type={check.entityType}</span>
+                  <strong>{check.outcome.replaceAll('_', ' ').toUpperCase()}</strong>
+                </p>)}
+              </>}
             </div>
+            {queueResult.sampleMatch && <div className="faceit-club-probe-results">
+              <p className="faceit-club-diagnostic-title">{mn ? 'ӨМНӨ ИЛГЭЭСЭН ТОГЛОЛТ' : 'PREVIOUSLY SUPPLIED MATCHROOM / INDEPENDENT CHECK'}</p>
+              <p>FACEIT MATCH API <strong>{queueResult.sampleMatch.status.toUpperCase()}</strong></p>
+              {queueResult.sampleMatch.status === 'available' && <>
+                <p>COMPETITION ID <strong>{queueResult.sampleMatch.competitionId || '—'}</strong></p>
+                <p>COMPETITION TYPE <strong>{queueResult.sampleMatch.competitionType || '—'}</strong></p>
+                <p>ORGANIZER ID <strong>{queueResult.sampleMatch.organizerId || '—'}</strong></p>
+              </>}
+              <p className="faceit-club-diagnostic-footnote">{mn
+                ? 'Энэ тоглолт таны Club queue-ийнх гэдгийг тусад нь баталгаажуулах шаардлагатай.'
+                : 'Match metadata is only additional context. It does not prove that the match originated from this Club queue.'}</p>
+            </div>}
             <div className="faceit-club-unverified" role="status">
-              <strong>{mn ? 'API ЭРХТЭЙ — ТОГЛОЛТЫН ТҮҮХ ОДООГООР БИШ' : 'QUEUE DETAILS ACCESSIBLE — MATCH HISTORY NOT YET AVAILABLE'}</strong>
+              <strong>{queueResult.status === 'inconclusive'
+                ? (mn ? 'OWNER ЭРХИЙГ 404-ӨӨР ДҮГНЭХГҮЙ' : '404 IS NOT PROOF OF MISSING OWNER PERMISSIONS')
+                : (mn ? 'QUEUE МЭДЭЭЛЭЛ ИРСЭН — MATCH HISTORY ҮГҮЙ' : 'QUEUE IDENTIFIED — MATCH HISTORY NOT YET CONNECTED')}</strong>
               <p>{mn
-                ? 'FACEIT энэ queue-ийн мэдээллийг серверийн түлхүүрт өгсөн. Гэхдээ queue-ийн бүх тоглолтыг жагсаах API, мөн FACEIT owner нэвтрэлтийг одоогоор баталгаажаагүй.'
-                : 'FACEIT accepted the NEXUS server key for this specific queue details endpoint. This does not authenticate the signed-in user as the FACEIT owner and does not mean FACEIT exposed an automatic queue match-history feed.'}</p>
-              {queueResult.entityIdMatchesProvidedClub && <p>{mn
-                ? 'FACEIT-ийн entity ID өгсөн Club ID-тэй таарч байна.'
-                : 'The provider queue entity ID matches your supplied Club ID.'}</p>}
+                ? 'FACEIT Data API-аас queue-ийн бүх тоглолтын түүхийг авах аргыг одоогоор батлаагүй. Таны эрхтэй эсэхийг энэ хариултаар бүрэн шийдэхгүй.'
+                : 'These checks do not authenticate the FACEIT account owner and do not establish a complete queue match-history feed. Nothing has been imported into NEXUS.'}</p>
             </div>
           </div>}
         </section>
@@ -304,9 +354,13 @@ export function FaceitClubClient({
             <div><strong>{mn?'Тоглолтын API':'Match API'}</strong><p>{mn?'Нэг matchroom-ын мэдээллийг унших боломжтой':'Official match details and player stats by match ID'}</p></div>
           </div>
           <div className="faceit-club-capability">
-            <span className={'faceit-club-state '+(queueResult?'available':'pending')}>03</span>
-            <div><strong>{mn?'Зөвхөн энэ queue-ийн owner API':'Selected queue / owner API'}</strong>
-              <p>{queueResult?'Queue details accessible':queueError?'FACEIT API did not confirm access':'Check permissions using the private API key'}</p></div>
+            <span className={'faceit-club-state '+(queueResult?.status === 'details_accessible' || queueResult?.status === 'listed_only' ? 'available' : 'pending')}>03</span>
+            <div><strong>{mn?'Зөвхөн энэ queue-ийн API':'Selected queue / organizer API'}</strong>
+              <p>{queueResult?.status === 'details_accessible' ? 'Queue details confirmed'
+                : queueResult?.status === 'listed_only' ? 'Found in club-filtered queue list'
+                : queueResult?.status === 'inconclusive' ? '404 returned; access cannot be determined'
+                : queueError ? 'FACEIT API check failed'
+                : 'Run a bounded diagnostic with the private key'}</p></div>
           </div>
           <div className="faceit-club-capability">
             <span className="faceit-club-state pending">04</span>
