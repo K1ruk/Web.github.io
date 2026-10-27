@@ -154,6 +154,7 @@ test('maps FACEIT CS2 match detail and actual per-player stats without inventing
   assert.equal(result.game, 'cs2');
   assert.equal(result.status, 'FINISHED');
   assert.equal(result.competitionId, 'actual-competition-id');
+  assert.equal(result.queueAssociationVerified, false); // unrelated test competition
   assert.equal(result.clubAssociationVerified, false);
   assert.equal(result.hasPlayerStats, true);
   assert.deepEqual(result.teams.map(team => team.score), [16,13]);
@@ -232,4 +233,25 @@ test('an incomplete or missing API list never fabricates a Club queue', () => {
   assert.equal(selectedQueueFromList({ items: null }), null);
   assert.equal(selectedQueueFromList({ items: [] }), null);
   assert.equal(selectedQueueFromList({ items: ['untrusted', 3, null] }), null);
+});
+
+
+test('FACEIT match details with exact competition ID and hub type verify queue membership', () => {
+  const match = {
+    match_id: id, game: 'cs2', status: 'FINISHED',
+    competition_id: NEXUS_FACEIT_QUEUE_ID,
+    competition_type: 'hub',
+    organizer_id: '3dc2f9c9-1f41-4e1d-bcca-37256ceb2786',
+  };
+  const result = summarizeFaceitMatch(id, match, null);
+  assert.equal(result.queueAssociationVerified, true);
+  assert.equal(result.clubAssociationVerified, false);
+});
+
+test('same competition UUID with a wrong type cannot verify queue membership', () => {
+  const result = summarizeFaceitMatch(id, {
+    match_id: id, game: 'cs2', competition_id: NEXUS_FACEIT_QUEUE_ID,
+    competition_type: 'tournament',
+  }, null);
+  assert.equal(result.queueAssociationVerified, false);
 });
