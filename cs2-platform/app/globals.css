@@ -494,3 +494,57 @@
 .faceit-core-contribution strong{font:600 16px ui-monospace,SFMono-Regular,Consolas,monospace;color:#e9a57b}
 .faceit-core-contribution strong small{font-size:10px;color:#857e78}
 @media(max-width:680px){.faceit-core-grid{grid-template-columns:1fr}.faceit-core-card{padding:18px}.faceit-core-score{font-size:36px}}
+
+
+/* Admin / FACEIT Club inspector: read-only game data */
+.faceit-club-page{max-width:1320px;padding-top:50px;padding-bottom:100px}
+.faceit-club-layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(310px,.72fr);gap:18px;align-items:start}
+.faceit-club-primary,.faceit-club-aside{display:flex;flex-direction:column;gap:18px;min-width:0}
+.faceit-club-reference{background:radial-gradient(ellipse at 100% 0%,#d4844521,transparent 65%),linear-gradient(130deg,#191716,#100f10)}
+.faceit-club-ref-label{font-size:10px;font-weight:700;letter-spacing:.13em;color:#a3a09b;margin:29px 0 8px}
+.faceit-club-id{font:700 clamp(12px,1.7vw,19px) ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:-.025em;overflow-wrap:anywhere;color:#f0dfd0}
+.faceit-club-go{display:inline-flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px;border:1px solid #e49b6466;border-radius:9px;padding:13px 16px;color:#eeb188;font-size:10px;font-weight:770;letter-spacing:.12em}
+.faceit-club-go:hover{border-color:#edb17f;background:#ce784125}
+.faceit-club-note{color:#a79e98;font-size:11px;line-height:1.8;margin:18px 0 0}
+.faceit-club-inspector h2{font-size:clamp(24px,2.7vw,36px);letter-spacing:-.06em;margin:29px 0 12px}
+.faceit-club-inspector>p{font-size:12px;line-height:1.8;color:#aca5a0;max-width:610px;margin:0 0 23px}
+.faceit-club-form{display:flex;flex-direction:column;gap:12px}
+.faceit-club-form .field{width:100%;min-width:0}
+.faceit-club-form .lab-run-button{margin-top:7px}
+.faceit-club-inspector .lab-instruction{margin-top:18px;margin-bottom:0}
+.faceit-club-aside .lab-card h2{font-size:23px;letter-spacing:-.055em;margin:22px 0}
+.faceit-club-capability{display:flex;gap:13px;align-items:start;border-top:1px solid #ffffff1c;padding:16px 0}
+.faceit-club-state{font:680 12px ui-monospace,SFMono-Regular,Consolas,monospace;min-width:32px;color:#a4a09c}
+.faceit-club-state.available{color:#9ac69e}.faceit-club-state.pending{color:#eba36e}
+.faceit-club-capability div{flex:1;min-width:0}
+.faceit-club-capability strong{font-size:12px;color:#e5ddd6}
+.faceit-club-capability p{font-size:11px;line-height:1.7;color:#96908b;margin:8px 0 0}
+.faceit-club-results h2{font-size:31px;letter-spacing:-.06em;margin:25px 0 7px;overflow-wrap:anywhere}
+.faceit-club-result-id{font:10px ui-monospace,SFMono-Regular,Consolas,monospace;color:#978d86;overflow-wrap:anywhere}
+.faceit-club-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:23px 0}
+.faceit-club-meta>span{display:flex;flex-direction:column;gap:8px;border:1px solid #ffffff1d;background:#ffffff05;border-radius:7px;padding:12px;font-size:9px;letter-spacing:.07em;color:#aaa19a}
+.faceit-club-meta>span strong{font-size:11px;letter-spacing:0;color:#e9ded4;overflow-wrap:anywhere}
+.faceit-club-team-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.faceit-club-team{display:flex;flex-direction:column;gap:8px;background:#09090960;border:1px solid #ffffff24;border-radius:11px;padding:18px}
+.faceit-club-team small{font:10px ui-monospace,SFMono-Regular,Consolas,monospace;color:#acaaa6}
+.faceit-club-team strong{font-size:18px;letter-spacing:-.04em;color:#f2e8e0;overflow-wrap:anywhere}
+.faceit-club-team span{font:700 27px ui-monospace,SFMono-Regular,Consolas,monospace;color:#e9a77b}
+.faceit-club-unverified{margin:25px 0;padding:17px 19px;background:#d4854120;border:1px solid #cf99647d;border-radius:10px}
+.faceit-club-unverified strong{font-size:10px;letter-spacing:.08em;color:#f0b58e}
+.faceit-club-unverified p{color:#bcb0a5;font-size:11px;line-height:1.8;margin:9px 0 0}
+.faceit-club-map{border-top:1px solid #ffffff24;padding-top:23px;margin-top:15px}
+.faceit-club-map-heading{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:13px;flex-wrap:wrap}
+.faceit-club-map-heading h3{font-size:22px;letter-spacing:-.05em;margin:0}
+.faceit-club-map-heading small{font-size:10px;letter-spacing:.08em;color:#a09791}
+.faceit-club-map-team{margin-bottom:23px}
+.faceit-club-map-team h4{color:#d3c0b1;font-size:13px;margin:0 0 10px}
+.faceit-club-table-wrap{overflow-x:auto}
+.faceit-club-stats-table{border-collapse:collapse;width:100%;min-width:580px}
+.faceit-club-stats-table th{font-size:9px;letter-spacing:.09em;color:#99918b;padding:11px 8px;border-bottom:1px solid #ffffff2b;text-align:left;white-space:nowrap}
+.faceit-club-stats-table td{border-bottom:1px solid #ffffff12;padding:11px 8px;color:#e2d9d0;font:600 12px ui-monospace,SFMono-Regular,Consolas,monospace;white-space:nowrap}
+.faceit-club-stats-table td:first-child{color:#eab084;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.faceit-club-no-stats{border:1px dashed #ffffff33;border-radius:10px;padding:19px;margin-top:24px;color:#abaaa7;font-size:12px}
+.faceit-club-no-stats strong{color:#d9b799;font-size:10px;letter-spacing:.09em}
+.faceit-club-no-stats p{line-height:1.7}
+@media(max-width:970px){.faceit-club-layout{grid-template-columns:1fr}.faceit-club-aside{display:grid;grid-template-columns:1.2fr .8fr}}
+@media(max-width:680px){.faceit-club-page{padding-top:30px;padding-bottom:75px}.faceit-club-aside{display:flex}.faceit-club-meta{grid-template-columns:1fr}.faceit-club-meta>span{padding:10px}.faceit-club-page .lab-card{padding:20px}.faceit-club-reference .faceit-club-id{font-size:12px}}
