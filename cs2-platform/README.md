@@ -90,6 +90,79 @@ Create a server-side FACEIT Data API key at https://developers.faceit.com/ (see 
 
 **Payment confirmation occurs only after verified Stripe webhooks.** Returning to the success page never marks a player paid.
 
+## June 2026+ FACEIT Club archive & original NEXUS Match Rating
+
+**Scope:** exactly one queue, `26ca1fb5-eb37-4b3c-9005-402eca7a9008`.
+**Cutoff:** `2026-06-01T00:00:00Z` (UTC, inclusive). January–May/undated
+matches are not displayed in the June list and cannot pass server-side
+date or database constraints. Data after June is included, not June alone.
+
+In `/admin/faceit-club`, click **SCAN AVAILABLE QUEUE HISTORY** until the
+documented Hub API reaches the last page. The scanner is capped at 100 pages
+and 10,000 provider records. Partial runs are not eligible for a complete
+June archive. **SAVE ALL JUNE+ MATCHES & PLAYER STATS** then imports the
+eligible entries in small batches (at most 3 matchrooms per server request).
+The user can stop between batches, reload the match history, and rerun it;
+existing matches with player statistics are safely skipped. FACEIT rate
+limits or connection failures leave already-committed batches intact.
+
+For every match the server **independently re-fetches** official FACEIT match
+details and stats. It requires:
+- `competition_id` equal to the exact selected queue UUID
+- `competition_type=hub`, `game=cs2`, `status=FINISHED`
+- `finished_at` on or after June 1, 2026 UTC, never an unknown date.
+
+An atomic, server-only Postgres function stores the verified match,
+individual FACEIT player identities and names, and each FACEIT player-map
+stat line. This keeps map samples separate, uses `match_id, player_id,
+map_index` as a deduplication key, and retains any additional numeric stat
+keys actually returned by FACEIT (capped/whitelisted). ADR, KAST, opening
+duel win %, K/D, kills, deaths, assists and headshots are also stored as
+structured nullable fields. Missing stats remain **null**, never fabricated.
+If a match temporarily has no stats, it can be rechecked on a later import.
+
+**Supabase:** `nexus_club_matches`, `nexus_club_players`,
+`nexus_club_player_maps` with RLS and revoked `anon`/`authenticated`
+access. Only the NEXUS authenticated admin API uses the private
+`SUPABASE_SECRET_KEY` and `FACEIT_API_KEY`. Archived Club activity is
+*not* copied into paid tournament results, approved skill tiers, or
+payments. The actual Supabase schema is installed through migration history
+and checked for anonymous privilege exposure.
+
+**NEXUS Match Rating v1 (original; not reverse-engineered HLTV/FACEIT):**
+Within each single CS2 map lobby, compare the real ADR, KAST, opening-duel
+win %, and K/D **against the players in the same map**, standardizing
+each available metric using that lobby's mean and variability. Initial
+weights: ADR 38%, KAST 28%, opening duel wins 20%, K/D 14%.
+The resulting display scale centers near **1.00** and is bounded to
+0.50–1.50. Require at least six unique players and two usable signals;
+unavailable stats never count as zero. Opening win % derived from fewer
+than three confirmed duels is ignored. The provisional rating is shrunk
+toward 1.00 for players with only a few archived maps. The player summary
+displays maps counted and confidence.
+
+These weights and scale are **experimental heuristics**. Unlike HLTV 3.0
+and FACEIT's 2026 Rating, this version has no round-event win probability,
+economy model, true opponent Elo history or fully parsed demos, so it must
+never be described as an exact reimplementation or proof of a player's
+cross-level skill. A Level 5 player with excellent statistics against
+Level 5 opponents is not automatically stronger than a Level 10 player.
+The existing FACEIT Elo-based NEXUS skill tier remains separate and subject
+to admin review.
+
+HLTV's published methodology: https://www.hltv.org/news/42485/introducing-rating-30
+FACEIT's official rating explanation:
+https://support.faceit.com/hc/en-us/articles/26530513602716-FACEIT-Rating-FAQ
+FACEIT demo Downloads API (separate approval required):
+https://docs.faceit.com/getting-started/Guides/download-api/
+
+**Operational limitation:** scanning and saving run in the admin's
+browser session while it is open, not as a scheduled background sync.
+Vercel previews still need private `FACEIT_API_KEY` and
+`SUPABASE_SECRET_KEY`; the authenticated owner can test locally where
+both keys are configured. Newly created Supabase archive tables start
+empty and real player data must only come from actual FACEIT API responses.
+
 ## FACEIT Club queue match-history discovery (Hub competition route)
 
 FACEIT returned the following fields for the **real** matchroom submitted by
@@ -120,14 +193,11 @@ CSV of retrieved results. It stops at the end of FACEIT pagination or a
 100-page / 10,000-match safety cap. A 404 is reported as
 **Hub endpoint not exposed** and does not imply an empty queue.
 
-This history feature makes a bounded **admin-triggered live read** through
-the FACEIT Data API. It does **not** yet persist matches, calculate league
-standings from them, trigger automatically on a schedule, or collect per-player
-stats for every historical match; the existing individual match inspector
-can retrieve available per-match player statistics separately. Only after
-confirming that the live Hub history endpoint works for this Club queue
-should we implement idempotent, admin-approved database ingestion and
-scheduled ongoing synchronization.
+The Hub scanner itself remains read-only. The **separate June 2026+ archive
+importer** can now persist verified matches and available per-map player
+statistics after an explicit admin action. A scheduled background sync,
+automated league standings and official tournament result import are **not**
+enabled. The archive stays isolated from tournament tables.
 
 ## FACEIT Club reference and match diagnostics
 
