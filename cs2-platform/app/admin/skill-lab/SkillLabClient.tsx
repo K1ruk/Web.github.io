@@ -138,7 +138,7 @@ export function SkillLabClient({
             <h2>{mn ? 'Өөрийн FACEIT үзүүлэлтийг шалгах' : 'Analyze your FACEIT record'}</h2>
             <p>{mn
               ? 'Энэ үйлдэл FACEIT-ийн тоглогчийн мэдээлэл, Elo болон сүүлийн 30 хүртэлх тоглолтын K/D-г татна.'
-              : 'Request your FACEIT CS2 profile, exact Elo and K/D ratios from up to 30 recent matches.'}</p>
+              : 'Read your FACEIT Elo, ADR, KAST, opening-duel win % and K/D when those fields are provided.'}</p>
 
             {!steamId && <div className="lab-instruction">
               <strong>{mn ? 'Steam хаягаа эхлээд холбоно уу' : 'Connect Steam first'}</strong>
@@ -197,13 +197,14 @@ export function SkillLabClient({
                       recent_performance_mismatch: mn ? 'Сүүлийн үзүүлэлттэй зөрүүтэй' : 'Recent performance does not align with current Elo',
                       lifetime_performance_mismatch: mn ? 'Нийт үзүүлэлттэй зөрүүтэй' : 'Lifetime performance does not align with current Elo',
                       limited_faceit_history: mn ? 'FACEIT тоглолтын түүх бага' : 'Limited lifetime FACEIT match history',
-                      damage_elo_mismatch: mn ? 'Damage үзүүлэлт Elo-оос өндөр' : 'Recent damage appears high relative to Elo',
-                      utility_elo_mismatch: mn ? 'Utility үзүүлэлт Elo-оос өндөр' : 'Lifetime utility appears high relative to Elo',
+                      damage_elo_mismatch: mn ? 'ADR үзүүлэлт Elo-оос өндөр' : 'ADR appears high relative to Elo',
+                      kast_elo_mismatch: mn ? 'KAST үзүүлэлт Elo-оос өндөр' : 'KAST appears high relative to Elo',
+                      opening_elo_mismatch: mn ? 'Opening duel win % Elo-оос өндөр' : 'Opening duel wins appear high relative to Elo',
                     } as Record<string, string>)[flag] || flag}</p>)}
                   </div>}
                   <p className="lab-protection-note">{mn
                     ? 'Сүүлийн тоглолт муу байсан ч NEXUS оноо буурахгүй. Түүхэн Elo хамгаалалт зөвхөн өмнө бүртгэсэн, баталгаажсан үнэлгээнд үйлчилнэ.'
-                    : 'Weak recent performance never lowers the Elo-based score. Strong damage, teamwork, opening or clutch play can provide small positive evidence. Historical Elo protection applies only to previously verified tournament snapshots.'}</p>
+                    : 'Weak recent performance never lowers the Elo-based score. Strong ADR, KAST, opening-duel wins or K/D can provide small positive evidence. Historical Elo protection applies only to previously verified tournament snapshots.'}</p>
                   {!result.statsAvailable && <p className="lab-results-note">{mn ? 'Сүүлийн тоглолтын мэдээлэл байхгүй тул энэ тооцоо зөвхөн Elo дээр үндэслэсэн.' : 'Recent match statistics were unavailable. The recommendation uses FACEIT Elo only.'}</p>}
                   <p className="lab-results-note">{mn ? 'Энэ нь эцсийн батлагдсан үнэлгээ биш. Тэмцээний бүртгэлтэй тоглогчдын үнэлгээг админ тусад нь батална.' : 'This does not assign an official tournament tier. An administrator must review and approve each paid tournament entry separately.'}</p>
                 </>
@@ -216,9 +217,9 @@ export function SkillLabClient({
 
         <aside className="lab-aside">
           <section className="lab-card lab-model">
-            <div className="lab-panel-heading"><span className="section-kicker">MODEL / MULTI-SIGNAL V3</span><span className="lab-model-dot" aria-hidden="true">✳</span></div>
+            <div className="lab-panel-heading"><span className="section-kicker">MODEL / CORE FOUR V4</span><span className="lab-model-dot" aria-hidden="true">✳</span></div>
             <h2>{mn ? 'NEXUS түвшин' : 'Tier breakdown'}<span>.</span></h2>
-            <p>{mn ? 'FACEIT Elo үндсэн үзүүлэлт хэвээр. Damage, ассист, utility, entry, clutch-ийн нэмэлт үзүүлэлт хамгийн ихдээ 7.5 оноо нэмж болно. Сул үзүүлэлт оноо хасахгүй.' : 'Exact Elo is translated into a 0–100 score. Recent and lifetime damage, assists, utility, entry and clutch evidence can add up to 7.5 points in total. Missing or weak stats never lower Elo-based seeding. This is an uncalibrated, provisional model.'}</p>
+            <p>{mn ? 'FACEIT Elo суурь үнэлгээ. ADR, KAST, opening duel win % болон K/D хамгийн ихдээ +7.5 оноо нэмнэ. Дутуу өгөгдлийг 0 гэж үзэхгүй.' : 'Exact Elo is translated into a 0–100 score. ADR, KAST, opening-duel win percentage and K/D can add up to 7.5 points above FACEIT Elo. Missing or weak stats never lower the Elo-based score. These provisional thresholds still need real-world validation.'}</p>
             <div className="lab-tier-list">
               {tierBands.map(band => (
                 <div key={band.tier} className={'lab-tier' + (result?.found && result.tier === band.tier ? ' current' : '')}>
