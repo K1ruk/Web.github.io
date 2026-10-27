@@ -54,9 +54,7 @@ function validNumber(raw: unknown, spec: MetricSpec): number | null {
   const string = String(raw).trim();
   const n = Number(string.replace('%', '').trim());
   if (!Number.isFinite(n) || n < 0) return null;
-  const normalized = spec.fraction && n > 1 && n <= 100
-    ? n / 100 : spec.percent && n <= 1 && string.includes('%')
-      ? n : n;
+  const normalized = spec.fraction && string.includes('%') ? n / 100 : n;
   // Do not interpret 1.7 as a 170% success rate: that is a malformed
   // rate, not a value to silently convert to 1.7%.
   if (spec.fraction && n > 1 && !string.includes('%')) return null;
