@@ -90,7 +90,7 @@ Create a server-side FACEIT Data API key at https://developers.faceit.com/ (see 
 
 **Payment confirmation occurs only after verified Stripe webhooks.** Returning to the success page never marks a player paid.
 
-## Admin FACEIT assessment and fair-play review (provisional v2)
+## Admin FACEIT assessment and fair-play review (provisional multi-signal v3)
 
 One server-side `FACEIT_API_KEY` belongs to **NEXUS**; players supply no API
 keys and never see the secret. To configure it, add it to `cs2-platform/.env.local`
@@ -115,14 +115,33 @@ Do not prefix it with `NEXT_PUBLIC_`.
 
 **Fair-play safeguards**
 
-- FACEIT Elo is the primary signal. Recent K/D below 1.0 never decreases
-  the proposal. Strong recent K/D can raise the score by at most four points.
+- FACEIT Elo remains the primary signal. In addition to K/D, NEXUS
+  attempts to retrieve ADR, kills per round, assists per match, utility
+  damage, enemies flashed, entry attempts/success, 1v1 and 1v2 clutch
+  rates, and lifetime statistics, when available from the FACEIT Data API.
+- A missing stat is `—`, **not zero**. Each recent metric tracks how many
+  matches provided the field; fewer than ten usable matches cannot earn a
+  recent-match bonus for that metric. Lifetime bonuses require at least
+  60 recorded matches.
+- Positive performance evidence is grouped into **damage/impact (max +3)**,
+  **teamplay/utility (+2.4)**, **entry performance (+1.2)** and
+  **clutch situations (+0.9)**, capped at **+7.5 overall**. Recent and
+  lifetime scores are compared, not added together, to avoid double counting.
+- Poor recent stats cannot lower the Elo-based recommendation. Headshot
+  percentage, sniper usage, MVPs and win rate are displayed as context,
+  but currently do not change the tier because of role bias, metric overlap
+  and the lack of outcome calibration.
+- The model is **provisional, not validated**. Signal thresholds and
+  bonuses are initial engineering heuristics that require calibration
+  against independently reviewed matches and tournament outcomes; no
+  statistical claim that they reflect true skill is being made.
 - If the platform previously observed the *same verified Steam account*,
   its highest recorded Elo from the last 180 days provides a protective
   seeding baseline (previous peak minus 150 Elo, if higher than current Elo).
   This is NEXUS-observed history, **not** FACEIT's all-time peak.
-- Large declines from the verified baseline, unusually high K/D relative
-  to a low Elo, and limited lifetime match history trigger **review flags**.
+- Large declines from the verified baseline, unusually high K/D, damage
+  or utility relative to a low Elo, and limited lifetime match history
+  trigger **review flags**.
   Flags are uncertain signals, **never proof of cheating or intentionally
   losing**, and do not automatically punish or reject players.
 - New accounts with no historical observations cannot be reliably identified
@@ -161,7 +180,7 @@ Set all environment variables in Vercel's server-side settings. Set `NEXT_PUBLIC
 - Only paid registrations may be graded and assigned teams.
 - Team publication requires a locked tournament, all scores approved, exactly 5 players per team and no active checkout holds.
 - Tournament capacity should be a **multiple of five** (50 or 60; not 64 for pure five-person teams).
-- The model is **provisional**; it does not currently adjust K/D for opponent strength, ingest Leetify or demo-level data, or establish reliable role impact. Never present its result as an objective AI decision.
+- The model is **provisional**; it does not adjust metrics for opponent strength, ingest Leetify or demo-level data, or establish reliable IGL/role impact. Never present its result as an objective AI decision.
 - Administrators can override provisional suggestions; flagged, downward and manual approvals require a meaningful written reason.
 - Team-generation algorithm randomizes candidates within similar skill bands and optimizes skill/role balance; the exact previewed roster is submitted for database publication. It can be extended to randomize between near-equivalent solutions after comprehensive testing.
 - `needs_refund` flags require immediate operator intervention. They are not automatically refunded by this version.
