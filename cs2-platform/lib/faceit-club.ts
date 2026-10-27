@@ -27,6 +27,33 @@ export type FaceitQueueDetails = {
   lastModified?: unknown;
 };
 
+/**
+ * FACEIT documents filtering by entity_type + entity_id, but does not
+ * document what entity_type represents a new Club. These are exploratory
+ * candidates scoped only to the user's single Club ID, NOT all queues.
+ */
+export const FACEIT_CLUB_ENTITY_TYPES = ['clan', 'club', 'hub'] as const;
+export type FaceitClubEntityType = (typeof FACEIT_CLUB_ENTITY_TYPES)[number];
+
+export type FaceitQueueListResponse = {
+  items?: unknown;
+  start?: unknown;
+  end?: unknown;
+};
+
+export function selectedQueueFromList(
+  listing: FaceitQueueListResponse | null,
+): FaceitQueueDetails | null {
+  if (!listing || !Array.isArray(listing.items)) return null;
+  const matches = listing.items.filter((item): item is FaceitQueueDetails =>
+    !!item && typeof item === 'object' && !Array.isArray(item)
+    && (item as FaceitQueueDetails).id === NEXUS_FACEIT_QUEUE_ID
+    && (item as FaceitQueueDetails).game === 'cs2'
+    && (item as FaceitQueueDetails).entityId === NEXUS_FACEIT_CLUB_ID,
+  );
+  return matches[0] ?? null;
+}
+
 export type FaceitQueueSummary = {
   queueId: string;
   clubId: string;
