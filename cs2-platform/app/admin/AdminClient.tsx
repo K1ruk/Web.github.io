@@ -3,7 +3,7 @@ import {FormEvent,useState} from 'react';import {useRouter} from 'next/navigatio
 type Tournament={id:string;name:string;status:string;capacity:number;fee_cents:number;currency:string};
 type Team={id:string;name:string;tournament_id:string};
 type Match={id:string;tournament_id:string;team_a:string;team_b:string;stage:string;status:string;best_of:number;scheduled_at:string|null;score_a:number|null;score_b:number|null};
-type Registration={id:string;tournament_id:string;user_id:string;nickname:string;status:string;assigned_tier:number|null;internal_score:number|null;primary_role:string;secondary_role:string};
+type Registration={id:string;tournament_id:string;user_id:string;nickname:string;status:string;assigned_tier:number|null;internal_score:number|null;primary_role:string;secondary_role:string;assessmentStatus:'approved'|'unchecked'|'review'|'suggested';suggestedTier:number|null};
 async function api(method:'POST'|'PATCH',path:string,body:unknown){const res=await fetch(path,{method,credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await res.json();if(!res.ok)throw new Error(data.error||'Request failed');return data;}
 export function AdminClient({tournaments,registrations,teams,matches}:{tournaments:Tournament[];registrations:Registration[];teams:Team[];matches:Match[]}){
  const {locale}=useLocale(),mn=locale==='mn',router=useRouter();
@@ -45,7 +45,12 @@ async function saveResult(matchId:string,e:FormEvent<HTMLFormElement>){e.prevent
       {mn?'ДАРААГИЙН 3 ТОГЛОГЧИЙГ ШАЛГАХ':'SCAN NEXT 3'}
     </button>
   </div>
-</div><div className="table-wrap"><table className="data-table"><thead><tr><th>PLAYER</th><th>STATUS</th><th>ROLE</th><th>TIER</th><th>SCORE</th><th>ACTION</th></tr></thead><tbody>{players.map(p=><tr key={p.id}><td>{p.nickname}</td><td>{p.status}</td><td>{p.primary_role}</td><td>{p.assigned_tier??'—'}</td><td>{p.internal_score??'—'}</td><td><button className="outline-button small" disabled={busy||p.status!=='paid'} onClick={()=>analyze(p.id)}>FACEIT ANALYZE</button><button className="outline-button small" style={{marginLeft:8}} disabled={p.status!=='paid'} onClick={()=>{setActiveReg(p.id);setAnalysis(null);setNote('');setTier(String(p.assigned_tier||3));setScore(String(p.internal_score||50));}}>MANUAL</button></td></tr>)}</tbody></table></div>{players.length===0&&<p className="small-text">No registered entries for this tournament.</p>}</section>
+</div><div className="table-wrap"><table className="data-table"><thead><tr><th>PLAYER</th><th>STATUS</th><th>ROLE</th><th>TIER</th><th>SCORE</th><th>FACEIT REVIEW</th><th>ACTION</th></tr></thead><tbody>{players.map(p=><tr key={p.id}><td>{p.nickname}</td><td>{p.status}</td><td>{p.primary_role}</td><td>{p.assigned_tier??'—'}</td><td>{p.internal_score??'—'}</td><td>
+  <span className={'admin-assessment-label '+p.assessmentStatus}>
+    {p.assessmentStatus==='approved'?'APPROVED':p.assessmentStatus==='review'?'NEEDS REVIEW':p.assessmentStatus==='suggested'?'SUGGESTED':'NOT SCANNED'}
+  </span>
+  {p.assigned_tier===null&&p.suggestedTier!==null&&<span className="admin-assessment-tier">TIER {p.suggestedTier}</span>}
+</td><td><button className="outline-button small" disabled={busy||p.status!=='paid'} onClick={()=>analyze(p.id)}>FACEIT ANALYZE</button><button className="outline-button small" style={{marginLeft:8}} disabled={p.status!=='paid'} onClick={()=>{setActiveReg(p.id);setAnalysis(null);setNote('');setTier(String(p.assigned_tier||3));setScore(String(p.internal_score||50));}}>MANUAL</button></td></tr>)}</tbody></table></div>{players.length===0&&<p className="small-text">No registered entries for this tournament.</p>}</section>
 
  {activeReg && <section className="panel admin-wide">
   <div className="section-kicker">04 / TIER REVIEW</div>
