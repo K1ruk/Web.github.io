@@ -66,24 +66,27 @@ function statusLabel(status: string, mn: boolean) {
 }
 
 function AvatarPhoto({
-  src, provider, large = false, fallback = '',
+  src, provider, large = false, fallback = '', fallbackSrc = null,
 }: {
   src: string | null;
   provider: 'Discord' | 'Steam';
   large?: boolean;
   fallback?: string;
+  fallbackSrc?: string | null;
 }) {
-  const [failed, setFailed] = useState(false);
-  if (src && !failed) {
+  const [attempt, setAttempt] = useState(0);
+  const sources = [src, fallbackSrc].filter((url): url is string => !!url);
+  const currentSrc = sources[attempt];
+  if (currentSrc) {
     return (
       <img
-        src={src}
-        alt={provider + ' profile picture'}
+        src={currentSrc}
+        alt={(attempt > 0 ? 'Discord' : provider) + ' profile picture'}
         className={large ? 'gamer-avatar-photo' : 'gamer-provider-photo'}
         referrerPolicy="no-referrer"
         loading="lazy"
         decoding="async"
-        onError={() => setFailed(true)}
+        onError={() => setAttempt(previous => previous + 1)}
       />
     );
   }
@@ -255,7 +258,7 @@ export function DashboardClient({
             </div>
             <div className="gamer-id-main">
               <div className="gamer-avatar" aria-label={playerName}>
-                <div className="gamer-avatar-inner"><AvatarPhoto key={steamAvatarUrl || discordAvatarUrl || "fallback"} src={steamAvatarUrl || discordAvatarUrl} provider={steamAvatarUrl ? "Steam" : "Discord"} large fallback={monogram} /></div>
+                <div className="gamer-avatar-inner"><AvatarPhoto key={`${steamAvatarUrl || ""}:${discordAvatarUrl || ""}`} src={steamAvatarUrl || discordAvatarUrl} fallbackSrc={steamAvatarUrl ? discordAvatarUrl : null} provider={steamAvatarUrl ? "Steam" : "Discord"} large fallback={monogram} /></div>
                 <span className="gamer-avatar-corner gamer-avatar-tl" />
                 <span className="gamer-avatar-corner gamer-avatar-br" />
               </div>
