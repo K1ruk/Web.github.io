@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLocale } from '@/components/LocaleProvider';
+import { PlayerTournamentStatus, type PlayerTournamentSnapshot } from '@/components/PlayerTournamentStatus';
 
 type Profile = {
   nickname: string;
@@ -39,6 +40,7 @@ type Props = {
   steamId: string | null;
   stats: Stats;
   registrations: Registration[];
+  tournamentSnapshots: PlayerTournamentSnapshot[];
 };
 
 const roles = ['AWPer', 'IGL', 'Entry Fragger', 'Rifler', 'Support', 'Lurker'];
@@ -110,7 +112,7 @@ function AvatarPhoto({
 }
 
 export function DashboardClient({
-  email, displayName, discordConnected, discordAvatarUrl, steamAvatarUrl, profile, steamId, stats, registrations,
+  email, displayName, discordConnected, discordAvatarUrl, steamAvatarUrl, profile, steamId, stats, registrations, tournamentSnapshots,
 }: Props) {
   const { locale } = useLocale();
   const mn = locale === 'mn';
@@ -134,6 +136,8 @@ export function DashboardClient({
   const monogram = playerName.trim().slice(0, 2).toUpperCase() || 'NX';
   const rate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : null;
   const tier = registrations.find(reg => reg.status === 'paid' && reg.assigned_tier !== null)?.assigned_tier;
+  const activeTournament=tournamentSnapshots.find(snapshot=>snapshot.registrationStatus==='paid'
+    && snapshot.eventStatus!=='finished')||tournamentSnapshots[0]||null;
 
   const achievements = [
     { id: 'verified', symbol: '✓', en: 'Steam Verified', mn: 'Steam баталгаажсан', descriptionEn: 'Connect your Steam account', descriptionMn: 'Steam хаягаа баталгаажуулах', unlocked: steamReady },
@@ -249,6 +253,7 @@ export function DashboardClient({
         </section>
       )}
 
+      <PlayerTournamentStatus snapshot={activeTournament} locale={mn?'mn':'en'} />
       <div className="gamer-profile-grid">
         <div className="gamer-primary-column">
           <section className="gamer-id-card" aria-label={mn ? 'Тоглогчийн карт' : 'Player card'}>
@@ -434,8 +439,8 @@ export function DashboardClient({
             <article className="gamer-entry" key={reg.id}>
               <div className="gamer-entry-heading"><h3>{reg.tournamentName}</h3><span className={'pill' + (reg.status === 'paid' ? ' orange' : '')}>{statusLabel(reg.status, mn)}</span></div>
               <div className="gamer-entry-bottom">
-                <div><small>{mn ? 'ТҮВШИН' : 'TIER'}</small><strong>{reg.assigned_tier ?? '—'}</strong></div>
-                <div><small>{mn ? 'БАГ' : 'TEAM'}</small><strong>{reg.teamName || (mn ? 'ХҮЛЭЭГДЭЖ БАЙНА' : 'PENDING')}</strong></div>
+                <div><small>{mn ? 'ТҮВШИН' : 'TIER'}</small><strong>{reg.assigned_tier!==null?'TIER '+reg.assigned_tier:'UNDER REVIEW'}</strong></div>
+                <div><small>{mn ? 'БАГ' : 'TEAM'}</small><strong>{reg.teamName || (mn ? 'ХҮЛЭЭГДЭЖ БАЙНА' : 'NOT RELEASED YET')}</strong></div>
               </div>
             </article>
           ))}</div>}
