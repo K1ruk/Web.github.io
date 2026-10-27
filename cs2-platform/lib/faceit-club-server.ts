@@ -3,7 +3,9 @@ import { faceitGet, FaceitRequestError } from './faceit';
 import {
   parseFaceitMatchId, summarizeFaceitMatch,
   type FaceitMatchDetail, type FaceitMatchStats,
-  type FaceitQueueDetails, summarizeFaceitQueue, NEXUS_FACEIT_QUEUE_ID,
+  type FaceitQueueDetails, type FaceitQueueListResponse,
+  FACEIT_CLUB_ENTITY_TYPES, selectedQueueFromList, summarizeFaceitQueue,
+  NEXUS_FACEIT_QUEUE_ID, NEXUS_FACEIT_CLUB_ID, NEXUS_FACEIT_TEST_MATCH_ID,
 } from './faceit-club';
 
 export class FaceitClubInspectionError extends Error {
@@ -61,34 +63,130 @@ export async function inspectFaceitMatch(matchUrlOrId: string) {
 
 
 /**
- * Probe the documented owner/organizer-only queue details endpoint.
- * The successful HTTP response confirms permission of the server API key
- * for this queue; it does not verify the Club owner's FACEIT login.
+ * Read-only diagnosis for exactly ONE selected FACEIT Club queue.
  *
- * Deliberately does not enumerate unrelated Club queues or invent a
- * Club queue match-history API that FACEIT has not documented.
+ * A 404 on a documented queue detail endpoint is inconclusive, not evidence
+ * that the human owner lacks access. Try documented, club-scoped queue-filter
+ * listings for likely entity types, then inspect the ONE user-provided sample
+ * match as independent context. No API keys are exposed and no records written.
  */
 export async function inspectFaceitQueue() {
   const queue = await faceitGet<FaceitQueueDetails>(
     '/games/cs2/queues/' + NEXUS_FACEIT_QUEUE_ID,
     { organizerEndpoint: true },
   );
-  if (!queue) {
-    throw new FaceitClubInspectionError(
-      'FACEIT returned 404 for this queue. It may not be visible to the supplied API key or might not exist on the Data API.',
-      404,
-    );
+  if (queue) {
+    try {
+      return {
+        status: 'details_accessible' as const,
+        queue: summarizeFaceitQueue(queue),
+        detailLookup: 'found' as const,
+        listingChecks: [],
+        sampleMatch: null,
+        note: 'The private FACEIT key can read queue details. This does not verify the signed-in user as FACEIT owner or provide a match-history listing.',
+        provider: 'FACEIT Data API' as const,
+      };
+    } catch {
+      throw new FaceitClubInspectionError('FACEIT returned mismatched queue details', 502);
+    }
   }
-  try {
+
+  type Check = {
+    entityType: (typeof FACEIT_CLUB_ENTITY_TYPES)[number];
+    outcome: 'matched' | 'not_listed' | 'not_found' | 'access_denied' | 'temporarily_unavailable' | 'invalid_response';
+  };
+  const listingChecks: Check[] = [];
+  let discovered: FaceitQueueDetails | null = null;
+  for (const entityType of FACEIT_CLUB_ENTITY_TYPES) {
+    try {
+      // This is a documented API, not a FACEIT website's private endpoint.
+      // Query is scoped to the exact Club ID the user supplied.
+      const listing = await faceitGet<FaceitQueueListResponse>(
+        '/games/cs2/queues?entity_type=' + encodeURIComponent(entityType)
+        + '&entity_id=' + encodeURIComponent(NEXUS_FACEIT_CLUB_ID)
+        + '&offset=0&limit=20',
+        { organizerEndpoint: true },
+      );
+      if (!listing) {
+        listingChecks.push({ entityType, outcome: 'not_found' });
+        continue;
+      }
+      if (!Array.isArray(listing.items)) {
+        listingChecks.push({ entityType, outcome: 'invalid_response' });
+        continue;
+      }
+      const match = selectedQueueFromList(listing);
+      if (match) {
+        discovered = match;
+        listingChecks.push({ entityType, outcome: 'matched' });
+        break;
+      }
+      listingChecks.push({ entityType, outcome: 'not_listed' });
+    } catch (error) {
+      if (error instanceof FaceitRequestError) {
+        if (error.code === 'invalid_key' || error.code === 'rate_limited') throw error;
+        listingChecks.push({
+          entityType,
+          outcome: error.code === 'permission_denied'
+            ? 'access_denied' : 'temporarily_unavailable',
+        });
+      } else {
+        listingChecks.push({ entityType, outcome: 'temporarily_unavailable' });
+      }
+    }
+  }
+
+  if (discovered) {
     return {
-      ...summarizeFaceitQueue(queue),
-      apiAccess: 'granted' as const,
+      status: 'listed_only' as const,
+      queue: summarizeFaceitQueue(discovered),
+      detailLookup: 'not_found' as const,
+      listingChecks,
+      sampleMatch: null,
+      note: 'The exact queue ID was returned in an entity-filtered FACEIT API listing, but the details endpoint returned 404. A match-history API and FACEIT owner login are still unverified.',
       provider: 'FACEIT Data API' as const,
     };
-  } catch {
-    throw new FaceitClubInspectionError(
-      'FACEIT returned an unexpected queue or game identifier.',
-      502,
-    );
   }
+
+  let sampleMatch: {
+    id: string;
+    competitionId: string | null;
+    competitionType: string | null;
+    organizerId: string | null;
+    status: 'available' | 'not_found' | 'unavailable';
+  } = {
+    id: NEXUS_FACEIT_TEST_MATCH_ID,
+    competitionId: null,
+    competitionType: null,
+    organizerId: null,
+    status: 'not_found',
+  };
+  try {
+    const match = await faceitGet<FaceitMatchDetail>(
+      '/matches/' + NEXUS_FACEIT_TEST_MATCH_ID,
+    );
+    if (match && match.match_id === NEXUS_FACEIT_TEST_MATCH_ID && match.game === 'cs2') {
+      sampleMatch = {
+        ...sampleMatch,
+        competitionId: typeof match.competition_id === 'string' ? match.competition_id : null,
+        competitionType: typeof match.competition_type === 'string' ? match.competition_type : null,
+        organizerId: typeof match.organizer_id === 'string' ? match.organizer_id : null,
+        status: 'available',
+      };
+    }
+  } catch (error) {
+    if (error instanceof FaceitRequestError
+      && ['invalid_key', 'rate_limited'].includes(error.code)) throw error;
+    sampleMatch = { ...sampleMatch, status: 'unavailable' };
+  }
+
+  return {
+    status: 'inconclusive' as const,
+    queue: null,
+    detailLookup: 'not_found' as const,
+    listingChecks,
+    sampleMatch,
+    note: 'FACEIT returned 404 from the documented queue details endpoint, and a club-scoped filtered lookup did not identify the selected queue. This does NOT prove the queue is invalid or the owner lacks permissions. New Club queues may not be exposed through this Data API.',
+    provider: 'FACEIT Data API' as const,
+  };
 }
