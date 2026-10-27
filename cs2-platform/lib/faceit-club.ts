@@ -4,6 +4,92 @@ export const NEXUS_FACEIT_CLUB_ID = 'a89ac9ff-8702-40df-b62d-8140719d481e';
 export const NEXUS_FACEIT_CLUB_URL =
   'https://www.faceit.com/en/club/' + NEXUS_FACEIT_CLUB_ID + '/parties';
 
+/** The ONE Club queue selected by the organizer (not the entire Club). */
+export const NEXUS_FACEIT_QUEUE_ID = '26ca1fb5-eb37-4b3c-9005-402eca7a9008';
+export const NEXUS_FACEIT_QUEUE_URL =
+  'https://www.faceit.com/en/club/' + NEXUS_FACEIT_CLUB_ID
+  + '/queue/' + NEXUS_FACEIT_QUEUE_ID;
+
+export type FaceitQueueDetails = {
+  id?: unknown;
+  game?: unknown;
+  queueName?: unknown;
+  entityId?: unknown;
+  entityType?: unknown;
+  organizerId?: unknown;
+  region?: unknown;
+  state?: unknown;
+  open?: unknown;
+  paused?: unknown;
+  calculateElo?: unknown;
+  minSkill?: unknown;
+  maxSkill?: unknown;
+  lastModified?: unknown;
+};
+
+export type FaceitQueueSummary = {
+  queueId: string;
+  clubId: string;
+  queueUrl: string;
+  name: string | null;
+  game: 'cs2';
+  region: string | null;
+  state: string | null;
+  open: boolean | null;
+  paused: boolean | null;
+  calculateElo: boolean | null;
+  entityId: string | null;
+  entityType: string | null;
+  organizerId: string | null;
+  minSkill: number | null;
+  maxSkill: number | null;
+  lastModified: string | null;
+  entityIdMatchesProvidedClub: boolean;
+  matchHistoryAvailable: false;
+  clubQueueOwnershipVerified: false;
+};
+
+/**
+ * A successful organizer API response establishes key-level permission
+ * to access this particular queue, not identity of the signed-in FACEIT owner
+ * and not access to an undocumented queue-match-history endpoint.
+ */
+export function summarizeFaceitQueue(
+  payload: FaceitQueueDetails,
+): FaceitQueueSummary {
+  if (!payload || payload.id !== NEXUS_FACEIT_QUEUE_ID || payload.game !== 'cs2') {
+    throw new Error('FACEIT returned a mismatching queue or game.');
+  }
+  const stringValue = (value: unknown, max = 160) =>
+    typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : null;
+  const booleanValue = (value: unknown) => typeof value === 'boolean' ? value : null;
+  const skillValue = (value: unknown) =>
+    Number.isSafeInteger(value) && typeof value === 'number' && value >= 0 && value <= 5000
+      ? value : null;
+  const entityId = stringValue(payload.entityId, 90);
+  return {
+    queueId: NEXUS_FACEIT_QUEUE_ID,
+    clubId: NEXUS_FACEIT_CLUB_ID,
+    queueUrl: NEXUS_FACEIT_QUEUE_URL,
+    name: stringValue(payload.queueName),
+    game: 'cs2',
+    region: stringValue(payload.region, 32),
+    state: stringValue(payload.state, 45),
+    open: booleanValue(payload.open),
+    paused: booleanValue(payload.paused),
+    calculateElo: booleanValue(payload.calculateElo),
+    entityId,
+    entityType: stringValue(payload.entityType, 45),
+    organizerId: stringValue(payload.organizerId, 90),
+    minSkill: skillValue(payload.minSkill),
+    maxSkill: skillValue(payload.maxSkill),
+    lastModified: stringValue(payload.lastModified, 45),
+    entityIdMatchesProvidedClub: entityId === NEXUS_FACEIT_CLUB_ID,
+    matchHistoryAvailable: false,
+    clubQueueOwnershipVerified: false,
+  };
+}
+
 /** Matchroom provided by the Club organizer for diagnostics; provenance not yet confirmed. */
 export const NEXUS_FACEIT_TEST_MATCH_ID = '1-1aaee7dd-bf23-44b6-b043-a96fc7586ce9';
 export const NEXUS_FACEIT_TEST_MATCH_URL =
