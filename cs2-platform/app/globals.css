@@ -573,3 +573,34 @@
 .faceit-club-probe-results .faceit-club-diagnostic-title{color:#d2c8c0;letter-spacing:.07em;font-size:10px}
 .faceit-club-probe-results .faceit-club-diagnostic-footnote{font:11px/1.7 inherit;color:#9d9993}
 @media(max-width:540px){.faceit-club-probe-results p{flex-wrap:wrap}.faceit-club-probe-results strong{text-align:left;max-width:100%}}
+
+
+/* FACEIT history scanner: queue-only, read-only and sourced from real API */
+.faceit-hub-history{background:radial-gradient(ellipse at 100% 0%,#b66d2920,transparent 62%),linear-gradient(145deg,#151313,#0d0c0e)}
+.faceit-hub-history h2{font-size:clamp(24px,2.8vw,34px);letter-spacing:-.055em;margin:22px 0 10px}
+.faceit-hub-history .faceit-club-note{margin-bottom:0}
+.faceit-history-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:22px}
+.faceit-history-actions .faceit-history-run{flex:1;min-width:230px;min-height:47px;margin-top:0}
+.faceit-history-actions .outline-button{min-height:47px}
+.faceit-history-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:22px 0 12px}
+.faceit-history-status>div{min-width:0;display:flex;flex-direction:column;gap:9px;padding:12px;border:1px solid #ffffff22;border-radius:9px;background:#00000025}
+.faceit-history-status small{font-size:9px;letter-spacing:.055em;line-height:1.5;color:#998f87}
+.faceit-history-status strong{font:700 clamp(14px,2.4vw,23px) ui-monospace,SFMono-Regular,Consolas,monospace;color:#f1ad82}
+.faceit-history-message{margin-top:18px;border:1px solid #9dbc9c54;background:#74a97812;color:#c4d2bf;border-radius:9px;padding:15px;font-size:12px;line-height:1.8}
+.faceit-history-message.caution{border-color:#bf90675e;background:#c6793612;color:#deb799}
+.faceit-history-list{border-top:1px solid #ffffff26;margin-top:22px;padding-top:18px}
+.faceit-history-list-title{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:10px}
+.faceit-history-list-title strong{font-size:10px;letter-spacing:.12em;color:#d8c4b6}
+.faceit-history-list-title span{font:10px ui-monospace,SFMono-Regular,Consolas,monospace;color:#9e928b}
+.faceit-history-match{padding:14px 0;border-bottom:1px solid #ffffff18;display:flex;flex-direction:column;gap:9px}
+.faceit-history-match-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font:10px ui-monospace,SFMono-Regular,Consolas,monospace;color:#a89d96}
+.faceit-history-match-meta span{color:#e8af83}
+.faceit-history-match-teams{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px}
+.faceit-history-match-teams strong{overflow-wrap:anywhere;font-size:13px;line-height:1.6;color:#ede0d7}
+.faceit-history-match-teams strong:last-child{text-align:right}
+.faceit-history-match-teams span{font:700 18px ui-monospace,SFMono-Regular,Consolas,monospace;color:#e8af83}
+.faceit-history-link{font-size:10px;letter-spacing:.08em;color:#dca878;align-self:flex-start}
+.faceit-history-link:hover{text-decoration:underline}
+.faceit-history-list>.outline-button{margin-top:16px}
+@media(max-width:770px){.faceit-history-status{grid-template-columns:repeat(2,minmax(0,1fr))}.faceit-history-actions>*{flex:1 1 190px}}
+@media(max-width:520px){.faceit-history-match-teams{gap:7px}.faceit-history-match-teams strong{font-size:11px}.faceit-history-match-teams span{font-size:15px}}
