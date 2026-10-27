@@ -88,3 +88,13 @@ test('FACEIT stats missing: no fabricated players, metrics or ratings',()=>{
   assert.equal(result.players.length,0);
   assert.equal(result.match.map_count,0);
 });
+
+
+test('incomplete FACEIT stats pages do not permanently mark a match as having player data',()=>{
+  const result=normalizeJuneClubMatch(matchId,details,{
+    rounds:[{round_stats:{Map:'de_nuke'},teams:[{players:[]}]}],
+  });
+  assert.equal(result.match.stats_status,'unavailable');
+  assert.equal(result.players.length,0);
+  assert.equal(result.match.map_count,1);
+});
