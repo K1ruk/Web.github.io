@@ -1,5 +1,5 @@
 'use client';
-import {FormEvent,useState} from 'react';import {useRouter} from 'next/navigation';import Link from 'next/link';import {FaceitStatsPanel} from '@/components/FaceitStatsPanel';import type {FaceitMetrics,MetricName} from '@/lib/faceit-metrics';import type {SkillArea} from '@/lib/skill';import {useLocale} from '@/components/LocaleProvider';import {TeamRosterEditor,isRosterDraft,type RosterDraft} from './TeamRosterEditor';
+import {FormEvent,useState} from 'react';import {useRouter} from 'next/navigation';import Link from 'next/link';import {FaceitStatsPanel} from '@/components/FaceitStatsPanel';import type {FaceitMetrics,MetricName} from '@/lib/faceit-metrics';import type {SkillArea} from '@/lib/skill';import {useLocale} from '@/components/LocaleProvider';import {TeamRosterEditor,isRosterDraft,type RosterDraft} from './TeamRosterEditor';import {rosterIncludesExactly} from '@/lib/roster-draft';
 type Tournament={id:string;name:string;status:string;capacity:number;fee_cents:number;currency:string};
 type Team={id:string;name:string;tournament_id:string};
 type Match={id:string;tournament_id:string;team_a:string;team_b:string;stage:string;status:string;best_of:number;scheduled_at:string|null;score_a:number|null;score_b:number|null};
@@ -40,7 +40,11 @@ export function AdminClient({tournaments,registrations,teams,matches}:{tournamen
  const event=tournaments.find(t=>t.id===selected),players=registrations.filter(r=>r.tournament_id===selected);
  const previewRosters:RosterDraft|null=preview&&typeof preview==='object'&&'teams' in preview
     &&isRosterDraft((preview as {teams:unknown}).teams)
-      ?(preview as {teams:RosterDraft}).teams:null;const eventTeams=teams.filter(t=>t.tournament_id===selected),eventMatches=matches.filter(m=>m.tournament_id===selected);
+      ?(preview as {teams:RosterDraft}).teams:null;
+ const confirmedPlayers=players.filter(p=>p.status==='paid');
+ const rosterReady=previewRosters!==null
+   &&confirmedPlayers.every(p=>p.assigned_tier!==null&&p.internal_score!==null)
+   &&rosterIncludesExactly(previewRosters,confirmedPlayers.map(p=>p.id));const eventTeams=teams.filter(t=>t.tournament_id===selected),eventMatches=matches.filter(m=>m.tournament_id===selected);
  async function run(task:()=>Promise<unknown>){setBusy(true);setMessage('');try{const result=await task();setMessage(typeof result==='string'?result:(mn?'Амжилттай.':'Action completed.'));router.refresh();}catch(e){setMessage(e instanceof Error?e.message:'Request failed');}finally{setBusy(false);}}
  async function createEvent(e:FormEvent<HTMLFormElement>){e.preventDefault();const fd=new FormData(e.currentTarget);const capacity=Number(fd.get('capacity')),feeCents=Math.round(Number(fd.get('fee'))*100);await run(async()=>{await api('POST','/api/admin/tournaments',{name:fd.get('name'),slug:fd.get('slug'),capacity,feeCents,currency:fd.get('currency')});return 'Tournament created. Refresh to select it.';});}
  async function lookup(){await run(async()=>{const result=await api('POST','/api/admin/lookup',{url:lookupUrl});setLookupResult(result);return 'Steam URL analyzed. Identity ownership is NOT verified by URL lookup.';});}
@@ -206,7 +210,7 @@ async function saveResult(matchId:string,e:FormEvent<HTMLFormElement>){e.prevent
   <button className="outline-button" disabled={busy || !Number.isFinite(Number(score)) || Number(score)<0 || Number(score)>100} onClick={approval}>APPROVE TIER</button>
   <p className="small-text margin-top">Review flags indicate uncertainty, not misconduct. NEXUS never assigns or punishes a player automatically.</p>
  </section>}
- <section className="panel admin-wide"><div className="section-kicker">05 / TEAM GENERATOR</div><h2>FIVE-PLAYER ROSTERS</h2><p className="small-text">Lock entries after all participants register and receive admin-approved tiers. Preview balanced five-player squads, swap players or change roles, then explicitly publish the reviewed roster. Preview does not save rosters.</p><div className="row-wrap"><button className="outline-button" disabled={busy||event?.status!=='locked'} onClick={()=>generate(false)}>PREVIEW TEAMS</button><button className="outline-button" disabled={busy||event?.status!=='locked'||!previewRosters} onClick={()=>generate(true)}>PUBLISH REVIEWED TEAMS</button></div>{previewRosters&&<TeamRosterEditor
+ <section className="panel admin-wide"><div className="section-kicker">05 / TEAM GENERATOR</div><h2>FIVE-PLAYER ROSTERS</h2><p className="small-text">Lock entries after all participants register and receive admin-approved tiers. Preview balanced five-player squads, swap players or change roles, then explicitly publish the reviewed roster. Preview does not save rosters.</p><div className="row-wrap"><button className="outline-button" disabled={busy||event?.status!=='locked'} onClick={()=>generate(false)}>PREVIEW TEAMS</button><button className="outline-button" disabled={busy||event?.status!=='locked'||!rosterReady} onClick={()=>generate(true)}>PUBLISH REVIEWED TEAMS</button></div>{previewRosters&&<TeamRosterEditor
    rosters={previewRosters}
    players={players}
    onChange={updated=>setPreview({preview:true,teams:updated})}
