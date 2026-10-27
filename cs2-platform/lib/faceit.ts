@@ -14,7 +14,7 @@ type FaceitHistory = {
   items?: Array<{ stats?: Record<string, unknown> }>;
 };
 
-export type FaceitFailureCode = 'not_configured' | 'invalid_key' | 'permission_denied' | 'rate_limited' | 'unavailable' | 'timeout' | 'invalid_response';
+export type FaceitFailureCode = 'not_configured' | 'invalid_key' | 'permission_denied' | 'bad_request' | 'rate_limited' | 'unavailable' | 'timeout' | 'invalid_response';
 
 export class FaceitRequestError extends Error {
   constructor(
@@ -61,6 +61,9 @@ export async function faceitGet<T>(path: string, options: { organizerEndpoint?: 
   }
   if (response.status === 429) {
     throw new FaceitRequestError('rate_limited', 'FACEIT is rate-limiting requests. Try again after the limit resets.');
+  }
+  if (response.status === 400) {
+    throw new FaceitRequestError('bad_request', 'FACEIT rejected the request parameters or entity filter (400).');
   }
   if (!response.ok) {
     throw new FaceitRequestError('unavailable', 'FACEIT temporarily returned an error. Try again later.');
