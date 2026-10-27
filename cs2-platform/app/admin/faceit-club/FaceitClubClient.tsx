@@ -18,15 +18,16 @@ function display(value: number | null | undefined, percent = false) {
 }
 
 export function FaceitClubClient({
-  clubId, clubUrl, apiConfigured,
+  clubId, clubUrl, initialMatchUrl, apiConfigured,
 }: {
   clubId: string;
   clubUrl: string;
+  initialMatchUrl: string;
   apiConfigured: boolean;
 }) {
   const { locale } = useLocale();
   const mn = locale === 'mn';
-  const [match, setMatch] = useState('');
+  const [match, setMatch] = useState(initialMatchUrl);
   const [result, setResult] = useState<Inspection | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -94,6 +95,12 @@ export function FaceitClubClient({
             </span>
           </div>
           <h2>{mn ? 'FACEIT тоглолтын үр дүнг шалгах' : 'Inspect a CS2 matchroom'}</h2>
+          <div className="faceit-club-unverified" role="note">
+            <strong>{mn ? 'ТОГЛОЛТЫН URL НЭМЭГДСЭН' : 'MATCHROOM LINK PRE-FILLED'}</strong>
+            <p>{mn
+              ? 'Таны илгээсэн matchroom холбоосыг доор орууллаа. Inspect товчийг дарж FACEIT API-аас бодит мэдээллийг шалгана. Клубийн хамаарал одоогоор баталгаажаагүй.'
+              : 'Your supplied matchroom is entered below. Click Inspect to request its real FACEIT data using your server-side key. Membership in your Club is not yet verified.'}</p>
+          </div>
           <p>{mn
             ? 'Club Queue → MATCHES цэснээс тоглолтын холбоос хуулна уу. Статистикийг FACEIT API-аас шууд уншина.'
             : 'In your Club, open Club Queues → MATCHES and copy a finished matchroom link. NEXUS will look up its match details and available player statistics.'}</p>
@@ -110,6 +117,9 @@ export function FaceitClubClient({
               placeholder="https://www.faceit.com/en/cs2/room/1-..."
               required
             />
+            <a href={initialMatchUrl} target="_blank" rel="noopener noreferrer" className="faceit-club-go">
+              {mn ? 'FACEIT ДЭЭР ЭНЭ ТОГЛОЛТЫГ НЭЭХ' : 'OPEN THIS MATCHROOM ON FACEIT'} ↗
+            </a>
             <button type="submit" className="lab-run-button" disabled={loading || !apiConfigured || !match.trim()}>
               <span>{loading ? (mn?'ШАЛГАЖ БАЙНА...':'CHECKING MATCH...') : (mn?'ТОГЛОЛТЫН СТАТИСТИК ШАЛГАХ':'INSPECT MATCH STATS')}</span>
               <span aria-hidden="true">↗</span>
