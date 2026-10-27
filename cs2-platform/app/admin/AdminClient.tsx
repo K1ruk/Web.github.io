@@ -37,11 +37,16 @@ export function AdminClient({tournaments,registrations,teams,matches}:{tournamen
  const [clubBaseline,setClubBaseline]=useState<RegistrationBaseline|null>(null);
  const [baselineLoading,setBaselineLoading]=useState(false);
  const [baselineError,setBaselineError]=useState('');
+ const [view,setView]=useState<'overview'|'players'|'teams'|'matches'|'tools'>('overview');
+ const [playerSearch,setPlayerSearch]=useState('');
+ const [reviewFilter,setReviewFilter]=useState<'all'|'pending'|'approved'>('all');
  const event=tournaments.find(t=>t.id===selected),players=registrations.filter(r=>r.tournament_id===selected);
  const previewRosters:RosterDraft|null=preview&&typeof preview==='object'&&'teams' in preview
     &&isRosterDraft((preview as {teams:unknown}).teams)
       ?(preview as {teams:RosterDraft}).teams:null;
  const confirmedPlayers=players.filter(p=>p.status==='paid');
+ const visiblePlayers=players.filter(p=>p.nickname.toLowerCase().includes(playerSearch.trim().toLowerCase())
+   &&(reviewFilter==='all'||(reviewFilter==='approved'?p.assigned_tier!==null:p.assigned_tier===null)));
  const rosterReady=previewRosters!==null
    &&confirmedPlayers.every(p=>p.assigned_tier!==null&&p.internal_score!==null)
    &&rosterIncludesExactly(previewRosters,confirmedPlayers.map(p=>p.id));const eventTeams=teams.filter(t=>t.tournament_id===selected),eventMatches=matches.filter(m=>m.tournament_id===selected);
@@ -102,14 +107,98 @@ export function AdminClient({tournaments,registrations,teams,matches}:{tournamen
  async function generate(publish:boolean){if(publish&&!confirm('Publish these manually reviewed teams permanently? This cannot be automatically undone.'))return;await run(async()=>{const exact=previewRosters;if(publish&&!exact)throw new Error('Preview rosters before publishing');const r=await api('POST','/api/admin/generate',{tournamentId:selected,publish,rosters:publish?exact:undefined});setPreview(r);return publish?'Teams published':'Balanced draft generated. Review before publishing.';});}
  async function scheduleMatch(e:FormEvent<HTMLFormElement>){e.preventDefault();const fd=new FormData(e.currentTarget);await run(async()=>{await api('POST','/api/admin/matches',{tournamentId:selected,teamA:fd.get('teamA'),teamB:fd.get('teamB'),scheduledAt:new Date(String(fd.get('scheduledAt'))).toISOString(),stage:fd.get('stage'),bestOf:Number(fd.get('bestOf'))});return 'Match scheduled';});}
 async function saveResult(matchId:string,e:FormEvent<HTMLFormElement>){e.preventDefault();const fd=new FormData(e.currentTarget);await run(async()=>{await api('PATCH','/api/admin/matches',{matchId,scoreA:Number(fd.get('scoreA')),scoreB:Number(fd.get('scoreB'))});return 'Match result saved';});}
- return <main className="content-page"><div className="section-kicker">ADMIN / ACCESS VERIFIED</div><h1 className="page-heading">{mn?'УДИРДЛАГА':'CONTROL'}</h1><p className="lead">{mn?'Тэмцээн, тоглогчдын зэрэглэл болон баг бүрдүүлэлтийг удирдах хэсэг.':'Tournament operations. Rankings, paid entries and team generation.'}</p><div className="row-wrap">
-  <Link className="lab-admin-shortcut" href="/admin/skill-lab">{mn?'FACEIT ШИНЖИЛГЭЭНИЙ ЛАБ':'OPEN FACEIT SKILL LAB'} <span aria-hidden="true">↗</span></Link>
-  <Link className="lab-admin-shortcut" href="/admin/faceit-club">{mn?'МИНИЙ FACEIT КЛУБ':'FACEIT CLUB / MATCH STATS'} <span aria-hidden="true">↗</span></Link>
-  <Link className="lab-admin-shortcut" href="/admin/demo-tournament">{mn?'КЛУБЫН ТОГЛОГЧДООР ДЕМО ТЭМЦЭЭН':'PREVIEW CLUB PLAYERS / DEMO TEAMS'} <span aria-hidden="true">↗</span></Link>
-</div><div className="admin-area margin-top">
- <section className="panel"><div className="section-kicker">01 / TOURNAMENTS</div><div className="form-row margin-top"><label className="field-label">SELECT EVENT</label><select className="field" value={selected} onChange={e=>{setSelected(e.target.value);setPreview(null);setActiveReg('');setClubBaseline(null);setAnalysis(null);}}><option value="">SELECT</option>{tournaments.map(t=><option key={t.id} value={t.id}>{t.name} / {t.status}</option>)}</select></div>{event&&<><p className="small-text">STATUS: <b>{event.status.toUpperCase()}</b> · CAPACITY: {event.capacity} · ENTRY: {(event.fee_cents/100).toFixed(2)} {event.currency.toUpperCase()}</p><div className="row-wrap">{event.status==='draft'&&<button className="outline-button" disabled={busy} onClick={()=>run(()=>api('PATCH','/api/admin/tournaments',{tournamentId:selected,status:'open'}))}>OPEN REGISTRATION</button>}{event.status==='open'&&<button className="outline-button" disabled={busy} onClick={()=>run(()=>api('PATCH','/api/admin/tournaments',{tournamentId:selected,status:'locked'}))}>LOCK REGISTRATION</button>}</div></>}</section>
- <section className="panel"><div className="section-kicker">02 / CREATE EVENT</div><form className="margin-top" onSubmit={createEvent}><div className="two-col"><div className="form-row"><label className="field-label">NAME</label><input className="field" name="name" required minLength={3} maxLength={100}/></div><div className="form-row"><label className="field-label">SLUG</label><input className="field" name="slug" required pattern="[a-z0-9-]{3,60}" placeholder="solo-circuit-01"/></div><div className="form-row"><label className="field-label">ENTRY FEE</label><input className="field" name="fee" type="number" min="0" max="10000" step=".01" defaultValue="0" required/><small className="small-text">0 = free event (no Stripe). Paid tournaments continue through Stripe.</small></div><div className="form-row"><label className="field-label">CAPACITY (MULTIPLE OF 5)</label><input className="field" name="capacity" type="number" min="5" max="1000" step="5" defaultValue="50" required/></div></div><div className="form-row"><label className="field-label">CURRENCY</label><select className="field" name="currency"><option value="eur">EUR</option><option value="sek">SEK</option><option value="usd">USD</option></select></div><button type="submit" className="outline-button" disabled={busy}>CREATE DRAFT EVENT</button></form></section>
- <section className="panel admin-wide"><div className="section-kicker">03 / STEAM URL ANALYZER</div><p className="small-text">Enter a Steam profile URL to retrieve available FACEIT data. URL lookup does not verify ownership; only Steam OpenID linking does.</p><div className="row-wrap"><input className="field" style={{flex:'1 1 350px'}} type="url" placeholder="https://steamcommunity.com/id/player" value={lookupUrl} onChange={e=>setLookupUrl(e.target.value)}/><button className="outline-button" disabled={busy||!lookupUrl} onClick={lookup}>ANALYZE URL</button></div>{lookupResult!==null&&<pre className="small-text table-wrap margin-top">{JSON.stringify(lookupResult,null,2)}</pre>}</section><section className="panel admin-wide"><div className="row-space admin-skill-actions">
+ return (
+ <main className="content-page nx-control-page">
+  <header className="nx-control-header">
+   <div>
+    <div className="section-kicker">NEXUS / OPERATIONS</div>
+    <h1 className="page-heading">{mn?'Удирдлагын төв':'Control center'}<span className="nx-control-period">.</span></h1>
+    <p className="lead">Manage one tournament at a time. Registrations, tiers, rosters and matches stay separated.</p>
+   </div>
+   <Link href="/dashboard" className="outline-button small">PLAYER VIEW <span aria-hidden="true">↗</span></Link>
+  </header>
+  <div className="nx-control-selector">
+   <div className="nx-control-select-copy"><span className="section-kicker">CURRENT EVENT</span><strong>{event?.name||'No tournament selected'}</strong></div>
+   <label htmlFor="nx-admin-event">Tournament</label>
+   <select id="nx-admin-event" className="field" value={selected}
+    onChange={e=>{setSelected(e.target.value);setPreview(null);setActiveReg('');setClubBaseline(null);setAnalysis(null);setView('overview');}}>
+    <option value="">SELECT TOURNAMENT</option>
+    {tournaments.map(t=><option value={t.id} key={t.id}>{t.name} · {t.status.toUpperCase()}</option>)}
+   </select>
+   <span className={'nx-control-state '+(event?.status==='open'?'active':'')}>{event?.status?.toUpperCase()||'NO EVENT'}</span>
+  </div>
+  <div className="nx-control-layout">
+   <nav className="nx-control-sidebar" aria-label="Admin workspace sections">
+    <div className="nx-control-menu-kicker">WORKSPACE</div>
+    {([
+      ['overview','Overview','01'],
+      ['players','Players & tiers','02'],
+      ['teams','Team builder','03'],
+      ['matches','Matches','04'],
+      ['tools','Tools & data','05'],
+    ] as const).map(([key,label,index])=><button key={key} type="button"
+       className={'nx-control-nav-item'+(view===key?' selected':'')}
+       aria-current={view===key?'page':undefined}
+       onClick={()=>setView(key)}>
+      <span>{index}</span><strong>{label}</strong>
+      {key==='players'&&<em>{players.length}</em>}
+    </button>)}
+    <div className="nx-control-sidebar-divider"/>
+    <span className="nx-control-menu-kicker">QUICK LINKS</span>
+    <Link className="nx-control-side-link" href="/admin/demo-tournament">Demo tournament <span>↗</span></Link>
+    <Link className="nx-control-side-link" href="/admin/faceit-club">Club archive <span>↗</span></Link>
+    <Link className="nx-control-side-link" href="/admin/skill-lab">Skill lab <span>↗</span></Link>
+   </nav>
+   <div className="nx-control-workspace">
+    {message&&<p className="form-message nx-control-notice" role="status">{message}</p>}
+    {view==='overview'&&<>
+      <div className="nx-control-section-top"><div><div className="section-kicker">WORKSPACE / 01</div><h2>Event overview</h2><p>Everything important at a glance. Open a section to work on it.</p></div></div>
+      <div className="nx-control-kpis">
+       <div><small>CONFIRMED PLAYERS</small><strong>{confirmedPlayers.length}<em> / {event?.capacity??'—'}</em></strong></div>
+       <div><small>TIERS APPROVED</small><strong>{confirmedPlayers.filter(p=>p.assigned_tier!=null).length}<em> / {confirmedPlayers.length}</em></strong></div>
+       <div><small>TEAMS CREATED</small><strong>{eventTeams.length}</strong></div>
+       <div><small>MATCHES</small><strong>{eventMatches.length}</strong></div>
+      </div>
+      <section className="panel nx-control-spotlight">
+        <div className="section-kicker">CURRENT STEP</div>
+        <h3>{!event?'Create your first event':event.status==='draft'?'Open player registration':event.status==='open'?'Review incoming registrations':event.status==='locked'?'Approve tiers and build teams':event.status==='published'?'Manage published matches':'Tournament complete'}</h3>
+        <p>{!event?'Create an event to start registration. The Club archive and simulator stay independent of tournament entries.'
+           :event.status==='draft'?'Your event is a private draft until you explicitly open it to entrants.'
+           :event.status==='open'?'Players can register with verified Discord and Steam. Review their archived Club performance before manually approving tiers.'
+           :event.status==='locked'?'Registration is locked. Every confirmed player needs an approved tier and score before creating teams.'
+           :event.status==='published'?'Your teams are published. Players can view their assigned squad and scheduled matches.'
+           :'Official results remain visible in player accounts.'}</p>
+        <div className="row-wrap">
+          {event?.status==='draft'&&<button className="outline-button" disabled={busy} onClick={()=>run(()=>api('PATCH','/api/admin/tournaments',{tournamentId:selected,status:'open'}))}>OPEN REGISTRATION</button>}
+          {event?.status==='open'&&<button className="outline-button" onClick={()=>setView('players')}>REVIEW ENTRANTS</button>}
+          {event?.status==='locked'&&<button className="outline-button" onClick={()=>setView('teams')}>BUILD TEAMS</button>}
+          {event?.status==='published'&&<button className="outline-button" onClick={()=>setView('matches')}>MATCH OPERATIONS</button>}
+          {!event&&<button className="outline-button" type="button" onClick={()=>document.getElementById('nx-create-event')?.scrollIntoView({behavior:'smooth'})}>CREATE EVENT</button>}
+        </div>
+      </section>
+      <div className="nx-control-shortcuts">
+        <button type="button" onClick={()=>setView('players')}><strong>Player review</strong><span>Registrations, baseline stats, tiers ↗</span></button>
+        <button type="button" onClick={()=>setView('teams')}><strong>Team builder</strong><span>Balance and publish five-player rosters ↗</span></button>
+        <button type="button" onClick={()=>setView('matches')}><strong>Match operations</strong><span>Scheduling and official scores ↗</span></button>
+      </div>
+      <div id="nx-create-event" className="nx-control-create">
+       <details open={tournaments.length===0}>
+        <summary><strong>CREATE ANOTHER TOURNAMENT</strong><span>Event setup and capacity</span></summary>
+        <section className="panel"><div className="section-kicker">02 / CREATE EVENT</div><form className="margin-top" onSubmit={createEvent}><div className="two-col"><div className="form-row"><label className="field-label">NAME</label><input className="field" name="name" required minLength={3} maxLength={100}/></div><div className="form-row"><label className="field-label">SLUG</label><input className="field" name="slug" required pattern="[a-z0-9-]{3,60}" placeholder="solo-circuit-01"/></div><div className="form-row"><label className="field-label">ENTRY FEE</label><input className="field" name="fee" type="number" min="0" max="10000" step=".01" defaultValue="0" required/><small className="small-text">0 = free event (no Stripe). Paid tournaments continue through Stripe.</small></div><div className="form-row"><label className="field-label">CAPACITY (MULTIPLE OF 5)</label><input className="field" name="capacity" type="number" min="5" max="1000" step="5" defaultValue="50" required/></div></div><div className="form-row"><label className="field-label">CURRENCY</label><select className="field" name="currency"><option value="eur">EUR</option><option value="sek">SEK</option><option value="usd">USD</option></select></div><button type="submit" className="outline-button" disabled={busy}>CREATE DRAFT EVENT</button></form></section>
+       </details>
+      </div>
+    </>}
+    {view==='players'&&<>
+     <div className="nx-control-section-top"><div><div className="section-kicker">WORKSPACE / 02</div><h2>Players & tiers</h2><p>Review each registration, inspect FACEIT evidence, and assign tiers manually.</p></div></div>
+     <div className="nx-control-filter-row">
+      <label htmlFor="nx-player-search">Search players</label>
+      <input id="nx-player-search" className="field" type="search" placeholder="Find a player by nickname" value={playerSearch} onChange={e=>setPlayerSearch(e.target.value)}/>
+      <label htmlFor="nx-player-filter">Filter</label>
+      <select id="nx-player-filter" className="field" value={reviewFilter} onChange={e=>setReviewFilter(e.target.value as 'all'|'pending'|'approved')}>
+       <option value="all">ALL ENTRIES</option><option value="pending">TIER PENDING</option><option value="approved">APPROVED</option>
+      </select>
+     </div>
+     <section className="panel admin-wide"><div className="row-space admin-skill-actions">
   <div>
     <div className="section-kicker">04 / PLAYERS</div>
     <h2>ENTRIES / {players.length}</h2>
@@ -121,14 +210,13 @@ async function saveResult(matchId:string,e:FormEvent<HTMLFormElement>){e.prevent
       {mn?'ДАРААГИЙН 3 ТОГЛОГЧИЙГ ШАЛГАХ':'SCAN NEXT 3'}
     </button>
   </div>
-</div><div className="table-wrap"><table className="data-table"><thead><tr><th>PLAYER</th><th>STATUS</th><th>ROLE</th><th>TIER</th><th>SCORE</th><th>FACEIT REVIEW</th><th>ACTION</th></tr></thead><tbody>{players.map(p=><tr key={p.id}><td>{p.nickname}</td><td>{p.status}</td><td>{p.primary_role}</td><td>{p.assigned_tier??'—'}</td><td>{p.internal_score??'—'}</td><td>
+</div><div className="table-wrap"><table className="data-table"><thead><tr><th>PLAYER</th><th>STATUS</th><th>ROLE</th><th>TIER</th><th>SCORE</th><th>FACEIT REVIEW</th><th>ACTION</th></tr></thead><tbody>{visiblePlayers.map(p=><tr key={p.id}><td>{p.nickname}</td><td>{p.status}</td><td>{p.primary_role}</td><td>{p.assigned_tier??'—'}</td><td>{p.internal_score??'—'}</td><td>
   <span className={'admin-assessment-label '+p.assessmentStatus}>
     {p.assessmentStatus==='approved'?'APPROVED':p.assessmentStatus==='review'?'NEEDS REVIEW':p.assessmentStatus==='suggested'?'SUGGESTED':'NOT SCANNED'}
   </span>
   {p.assigned_tier===null&&p.suggestedTier!==null&&<span className="admin-assessment-tier">TIER {p.suggestedTier}</span>}
 </td><td><button className="outline-button small" disabled={busy||p.status!=='paid'} onClick={()=>p.assessmentStatus==='unchecked'?analyze(p.id):reviewStored(p.id)}>{p.assessmentStatus==='unchecked'?'FACEIT SCAN':'REVIEW SAVED'}</button><button className="outline-button small" style={{marginLeft:8}} disabled={busy||p.status!=='paid'} onClick={()=>{setActiveReg(p.id);setAnalysis(null);setNote('');setTier(String(p.assigned_tier||3));setScore(String(p.internal_score||50));void reviewClubBaseline(p.id);}}>REVIEW / TIER</button></td></tr>)}</tbody></table></div>{players.length===0&&<p className="small-text">No registered entries for this tournament.</p>}</section>
-
- {activeReg && <section className="panel admin-wide">
+     {activeReg && <section className="panel admin-wide">
   <div className="section-kicker">04 / TIER REVIEW</div>
   <p className="small-text">REGISTRATION: {activeReg}</p>
   <section className="admin-club-baseline" aria-label="Pre-tournament Club performance baseline">
@@ -211,10 +299,31 @@ async function saveResult(matchId:string,e:FormEvent<HTMLFormElement>){e.prevent
   <button className="outline-button" disabled={busy || !Number.isFinite(Number(score)) || Number(score)<0 || Number(score)>100} onClick={approval}>APPROVE TIER</button>
   <p className="small-text margin-top">Review flags indicate uncertainty, not misconduct. NEXUS never assigns or punishes a player automatically.</p>
  </section>}
- <section className="panel admin-wide"><div className="section-kicker">05 / TEAM GENERATOR</div><h2>FIVE-PLAYER ROSTERS</h2><p className="small-text">Lock entries after all participants register and receive admin-approved tiers. Preview balanced five-player squads, swap players or change roles, then explicitly publish the reviewed roster. Preview does not save rosters.</p><div className="row-wrap"><button className="outline-button" disabled={busy||event?.status!=='locked'} onClick={()=>generate(false)}>PREVIEW TEAMS</button><button className="outline-button" disabled={busy||event?.status!=='locked'||!rosterReady} onClick={()=>generate(true)}>PUBLISH REVIEWED TEAMS</button></div>{previewRosters&&<TeamRosterEditor
+    </>}
+    {view==='teams'&&<>
+      <div className="nx-control-section-top"><div><div className="section-kicker">WORKSPACE / 03</div><h2>Team builder</h2><p>Preview rosters, make your adjustments, then confirm publication.</p></div></div>
+      {event?.status==='open'&&<div className="nx-control-inline-action"><p>Finish registration before generating final teams.</p><button type="button" className="outline-button" disabled={busy} onClick={()=>run(()=>api('PATCH','/api/admin/tournaments',{tournamentId:selected,status:'locked'}))}>LOCK REGISTRATION</button></div>}
+      <section className="panel admin-wide"><div className="section-kicker">05 / TEAM GENERATOR</div><h2>FIVE-PLAYER ROSTERS</h2><p className="small-text">Lock entries after all participants register and receive admin-approved tiers. Preview balanced five-player squads, swap players or change roles, then explicitly publish the reviewed roster. Preview does not save rosters.</p><div className="row-wrap"><button className="outline-button" disabled={busy||event?.status!=='locked'} onClick={()=>generate(false)}>PREVIEW TEAMS</button><button className="outline-button" disabled={busy||event?.status!=='locked'||!rosterReady} onClick={()=>generate(true)}>PUBLISH REVIEWED TEAMS</button></div>{previewRosters&&<TeamRosterEditor
    rosters={previewRosters}
    players={players}
    onChange={updated=>setPreview({preview:true,teams:updated})}
  />}</section>
- <section className="panel admin-wide"><div className="section-kicker">06 / MATCH OPERATIONS</div><h2>SCHEDULE / RESULTS</h2>{event?.status==='published'&&eventTeams.length>=2&&<form className="margin-top" onSubmit={scheduleMatch}><div className="two-col"><div className="form-row"><label className="field-label">TEAM A</label><select className="field" required name="teamA">{eventTeams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div className="form-row"><label className="field-label">TEAM B</label><select className="field" required name="teamB">{eventTeams.slice().reverse().map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div className="form-row"><label className="field-label">DATE AND TIME (LOCAL)</label><input className="field" type="datetime-local" required name="scheduledAt"/></div><div className="form-row"><label className="field-label">STAGE</label><select className="field" name="stage"><option value="groups">GROUPS</option><option value="playoffs">PLAYOFFS</option><option value="final">FINAL</option></select></div><div className="form-row"><label className="field-label">FORMAT</label><select className="field" name="bestOf"><option value="3">BO3</option><option value="1">BO1</option></select></div></div><button className="outline-button" disabled={busy} type="submit">ADD MATCH</button></form>}<div className="stack margin-top">{eventMatches.map(m=><div key={m.id} className="result-card"><div className="row-space"><strong>{teams.find(t=>t.id===m.team_a)?.name||'TEAM A'} / {teams.find(t=>t.id===m.team_b)?.name||'TEAM B'}</strong><span className="pill">{m.status.toUpperCase()}</span></div><p className="small-text">{m.stage} · BO{m.best_of} · {m.scheduled_at?new Date(m.scheduled_at).toLocaleString():'TBA'}</p>{m.status==='completed'?<p className="small-text">FINAL: {m.score_a} – {m.score_b}</p>:<form onSubmit={e=>saveResult(m.id,e)} className="row-wrap"><label className="small-text">TEAM A <input className="field" style={{width:85}} type="number" name="scoreA" min="0" max="3" required/></label><label className="small-text">TEAM B <input className="field" style={{width:85}} type="number" name="scoreB" min="0" max="3" required/></label><button className="outline-button small" disabled={busy}>SAVE RESULT</button></form>}</div>)}</div></section></div>{message&&<p className="form-message margin-top" role="status">{message}</p>}</main>;
+    </>}
+    {view==='matches'&&<>
+      <div className="nx-control-section-top"><div><div className="section-kicker">WORKSPACE / 04</div><h2>Matches</h2><p>Schedule matches and submit verified final scores.</p></div></div>
+       <section className="panel admin-wide"><div className="section-kicker">06 / MATCH OPERATIONS</div><h2>SCHEDULE / RESULTS</h2>{event?.status==='published'&&eventTeams.length>=2&&<form className="margin-top" onSubmit={scheduleMatch}><div className="two-col"><div className="form-row"><label className="field-label">TEAM A</label><select className="field" required name="teamA">{eventTeams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div className="form-row"><label className="field-label">TEAM B</label><select className="field" required name="teamB">{eventTeams.slice().reverse().map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div className="form-row"><label className="field-label">DATE AND TIME (LOCAL)</label><input className="field" type="datetime-local" required name="scheduledAt"/></div><div className="form-row"><label className="field-label">STAGE</label><select className="field" name="stage"><option value="groups">GROUPS</option><option value="playoffs">PLAYOFFS</option><option value="final">FINAL</option></select></div><div className="form-row"><label className="field-label">FORMAT</label><select className="field" name="bestOf"><option value="3">BO3</option><option value="1">BO1</option></select></div></div><button className="outline-button" disabled={busy} type="submit">ADD MATCH</button></form>}<div className="stack margin-top">{eventMatches.map(m=><div key={m.id} className="result-card"><div className="row-space"><strong>{teams.find(t=>t.id===m.team_a)?.name||'TEAM A'} / {teams.find(t=>t.id===m.team_b)?.name||'TEAM B'}</strong><span className="pill">{m.status.toUpperCase()}</span></div><p className="small-text">{m.stage} · BO{m.best_of} · {m.scheduled_at?new Date(m.scheduled_at).toLocaleString():'TBA'}</p>{m.status==='completed'?<p className="small-text">FINAL: {m.score_a} – {m.score_b}</p>:<form onSubmit={e=>saveResult(m.id,e)} className="row-wrap"><label className="small-text">TEAM A <input className="field" style={{width:85}} type="number" name="scoreA" min="0" max="3" required/></label><label className="small-text">TEAM B <input className="field" style={{width:85}} type="number" name="scoreB" min="0" max="3" required/></label><button className="outline-button small" disabled={busy}>SAVE RESULT</button></form>}</div>)}</div></section>
+    </>}
+    {view==='tools'&&<>
+     <div className="nx-control-section-top"><div><div className="section-kicker">WORKSPACE / 05</div><h2>Tools & data</h2><p>Optional investigations and deeper FACEIT analysis, away from core tournament operations.</p></div></div>
+     <div className="nx-control-tool-links">
+       <Link href="/admin/faceit-club"><strong>FACEIT Club archive</strong><span>History, player stats, and the June baseline ↗</span></Link>
+       <Link href="/admin/demo-tournament"><strong>Demo tournament</strong><span>Preview fake registrations and team layouts ↗</span></Link>
+       <Link href="/admin/skill-lab"><strong>Skill lab</strong><span>Advanced FACEIT metrics and ratings ↗</span></Link>
+     </div>
+     <section className="panel admin-wide"><div className="section-kicker">03 / STEAM URL ANALYZER</div><p className="small-text">Enter a Steam profile URL to retrieve available FACEIT data. URL lookup does not verify ownership; only Steam OpenID linking does.</p><div className="row-wrap"><input className="field" style={{flex:'1 1 350px'}} type="url" placeholder="https://steamcommunity.com/id/player" value={lookupUrl} onChange={e=>setLookupUrl(e.target.value)}/><button className="outline-button" disabled={busy||!lookupUrl} onClick={lookup}>ANALYZE URL</button></div>{lookupResult!==null&&<pre className="small-text table-wrap margin-top">{JSON.stringify(lookupResult,null,2)}</pre>}</section>
+    </>}
+   </div>
+  </div>
+ </main>
+ );
 }
