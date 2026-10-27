@@ -25,7 +25,7 @@ export default function Login() {
     let active = true;
 
     db.auth.getUser().then(({ data, error }) => {
-      if (active && !error && data.user) router.replace('/dashboard');
+      if (active && !error && data.user) { localStorage.setItem('nexus-intro-dismissed','1'); router.replace('/dashboard'); }
     }).catch(() => {});
 
     return () => { active = false; };
@@ -47,6 +47,7 @@ export default function Login() {
     const db = getAuthClient();
     if (!db) return;
 
+    localStorage.setItem('nexus-intro-dismissed','1');
     setBusy('discord');
     try {
       const { error } = await db.auth.signInWithOAuth({
@@ -93,16 +94,16 @@ export default function Login() {
   }
 
   return (
-    <main className="content-page">
-      <div className="section-kicker">ACCOUNT / 01</div>
-      <h1 className="page-heading">{mn ? 'НЭВТРЭХ' : 'SIGN IN'}</h1>
+    <main className="content-page nx-login-page">
+      <div className="section-kicker">NEXUS / RETURNING PLAYER</div>
+      <h1 className="page-heading">{mn ? 'ТАВТАЙ МОРИЛ' : 'WELCOME BACK'}</h1>
       <p className="lead">
         {mn
-          ? 'Discord ашиглан нэвтэрнэ үү. Тэмцээнд бүртгүүлэхийн өмнө Steam хаягаа баталгаажуулна.'
-          : 'Sign in with Discord. Verify your Steam account before joining a tournament.'}
+          ? 'Өмнө бүртгүүлсэн хаягаараа нэвтэрч, тоглогчийн хуудсандаа шууд очно уу.'
+          : 'Already a NEXUS player? Sign in to go straight to your dashboard, teams and tournament status.'}
       </p>
 
-      <div className="panel" style={{ maxWidth: 530, marginTop: 35 }}>
+      <div className="panel nx-login-panel" style={{ maxWidth: 530, marginTop: 35 }}>
         <div className="section-kicker" style={{ marginBottom: 18 }}>
           {mn ? 'ҮНДСЭН НЭВТРЭЛТ' : 'QUICK SIGN IN'}
         </div>
@@ -114,8 +115,8 @@ export default function Login() {
           style={{
             width: '100%',
             minHeight: 58,
-            borderColor: '#8e90f166',
-            background: '#5865f211',
+            borderColor: '#53b6ff',
+            background: 'linear-gradient(110deg,#176ae9,#369eff)',
             justifyContent: 'center',
           }}
         >
@@ -150,7 +151,8 @@ export default function Login() {
 
         {message && <p className="form-message margin-top" role="status">{message}</p>}
       </div>
-      <p className="small-text margin-top"><Link href="/">← {mn ? 'НҮҮР' : 'HOME'}</Link></p>
+      <div className="nx-login-new"><span>{mn?'АНХ УДАА ИРЖ БАЙНА УУ?':'NEW TO NEXUS?'}</span><Link href="/onboarding">{mn?'ТОХИРГОО ЭХЛҮҮЛЭХ':'CREATE YOUR PLAYER PROFILE'} <span aria-hidden="true">↗</span></Link></div>
+      <p className="small-text margin-top"><Link href="/">← {mn ? 'НҮҮР' : 'BACK TO HOME'}</Link></p>
     </main>
   );
 }
