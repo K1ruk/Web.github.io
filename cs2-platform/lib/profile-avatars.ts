@@ -35,50 +35,46 @@ export function discordAvatarFromMetadata(metadata: Record<string, unknown> | nu
 }
 
 /**
- * The avatar can be fetched with STEAM_WEB_API_KEY when configured, otherwise
- * from Steam's public community XML profile. No Steam API key is sent client-side.
+ * SteamID64 identifies the player, but the avatar CDN filename is a separate
+ * hash. Prefer Valve's official GetPlayerSummaries API when a server-side key
+ * is available. Otherwise resolve the public profile avatar by SteamID64
+ * through Unavatar (never an arbitrary user-provided URL).
+ *
+ * The third-party fallback receives a public SteamID64 and is used only for
+ * presentation. Never use avatars to establish account ownership.
  */
 export async function steamAvatarFromId(steamId: string | null): Promise<string | null> {
-  if (!steamId || !/^\d{17}$/.test(steamId)) return null;
+  if (!steamId || !/^\\d{17}$/.test(steamId)) return null;
 
+  const fallbackUrl = `https://unavatar.io/steam/profile:${steamId}`;
   const apiKey = process.env.STEAM_WEB_API_KEY?.trim();
-  if (apiKey) {
-    try {
-      const endpoint = new URL('https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/');
-      endpoint.searchParams.set('key', apiKey);
-      endpoint.searchParams.set('steamids', steamId);
-      const response = await fetch(endpoint, {
-        next: { revalidate: 60 * 60 },
-        signal: AbortSignal.timeout(5000),
-      });
-      if (response.ok) {
-        const data: unknown = await response.json();
-        const players = (data as { response?: { players?: Array<{ steamid?: string; avatarfull?: string; avatarmedium?: string }> } })?.response?.players;
-        const player = players?.find(item => item.steamid === steamId);
-        const avatar = trustedAvatar(player?.avatarfull || player?.avatarmedium, 'steam');
-        if (avatar) return avatar;
-      }
-    } catch {
-      // Steam API keys are optional in local development.
-    }
-  }
+  if (!apiKey) return fallbackUrl;
 
   try {
-    // Public Steam Community XML is deprecated but remains a useful fallback
-    // for development without a Steam Web API key.
-    const response = await fetch(`https://steamcommunity.com/profiles/${steamId}/?xml=1`, {
-      next: { revalidate: 60 * 60 },
-      signal: AbortSignal.timeout(5000),
-      headers: { Accept: 'text/xml, application/xml' },
-    });
-    if (!response.ok) return null;
+    const endpoint = new URL('https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/');
+    endpoint.searchParams.set('key', apiKey);
+    endpoint.searchParams.set('steamids', steamId);
 
-    const xml = await response.text();
-    if (xml.length > 250_000) return null;
-    const raw = /<avatarFull>(?:<!\[CDATA\[)?([^<]*?)(?:\]\]>)?<\/avatarFull>/i.exec(xml)?.[1]?.trim()
-      || /<avatarMedium>(?:<!\[CDATA\[)?([^<]*?)(?:\]\]>)?<\/avatarMedium>/i.exec(xml)?.[1]?.trim();
-    return trustedAvatar(raw, 'steam');
+    const response = await fetch(endpoint, {
+      next: { revalidate: 60 * 60 },
+      signal: AbortSignal.timeout(3500),
+    });
+    if (response.ok) {
+      const data: unknown = await response.json();
+      const players = (data as {
+        response?: { players?: Array<{
+          steamid?: string;
+          avatarfull?: string;
+          avatarmedium?: string;
+        }> }
+      })?.response?.players;
+      const player = players?.find(item => item.steamid === steamId);
+      const avatar = trustedAvatar(player?.avatarfull || player?.avatarmedium, 'steam');
+      if (avatar) return avatar;
+    }
   } catch {
-    return null;
+    // Fallback to the public SteamID-based avatar resolver if Valve is offline.
   }
+
+  return fallbackUrl;
 }
