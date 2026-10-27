@@ -96,7 +96,32 @@ NEXUS has a reference to the supplied Club page:
 
 - Club: `https://www.faceit.com/en/club/a89ac9ff-8702-40df-b62d-8140719d481e/parties`
 - Identifier: `a89ac9ff-8702-40df-b62d-8140719d481e`
+- **Only tracked Club queue:** `https://www.faceit.com/en/club/a89ac9ff-8702-40df-b62d-8140719d481e/queue/26ca1fb5-eb37-4b3c-9005-402eca7a9008`
+- Queue ID: `26ca1fb5-eb37-4b3c-9005-402eca7a9008` (provided by the queue owner)
 - Admin diagnostic page: `/admin/faceit-club`
+
+**Owner-only queue permissions check:** The owner can click
+**CHECK OWNER QUEUE API ACCESS** at `/admin/faceit-club`. NEXUS makes
+`GET /games/cs2/queues/26ca1fb5-eb37-4b3c-9005-402eca7a9008`
+using the private server-side `FACEIT_API_KEY`. A 200 response must carry
+the **exact configured queue ID** and `game=cs2`. The UI shows the provider
+queue name, organizer ID, entity ID/type, region, and status. This tests
+whether the **developer API key** has organizer-restricted access; it is not
+FACEIT account sign-in and does not establish that the signed-in NEXUS user
+has been verified by FACEIT as owner. A 403 may mean the developer key
+lacks special organizer permissions even when the human is the queue owner.
+The UI provides a clear permissions error instead of treating this as an
+invalid player or inventing results. This action makes no database writes.
+
+The public Data API currently does **not document a queue-specific match
+history listing**. The official FACEIT Club admin interface **does** show
+Queue Matches; that browser view is not authorization to scrape private
+endpoints. A possible future route is organizer-scoped FACEIT webhooks,
+which document `match_status_finished` and `match_object_created` events,
+but we must verify each event belongs to this precise queue and authenticate
+incoming webhooks before importing anything. Webhooks alone also do not
+backfill historical matches. Do not enable synchronization before ownership,
+scope and data provenance are confirmed.
 
 **Current integration: read-only, match-by-match.** A NEXUS administrator may
 paste a FACEIT CS2 matchroom URL, such as
