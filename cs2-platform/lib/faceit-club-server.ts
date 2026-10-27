@@ -1,5 +1,6 @@
 import 'server-only';
 import { faceitGet, FaceitRequestError } from './faceit';
+import { normalizeQueueHubMatches, type FaceitHubMatchesResponse } from './faceit-hub-history';
 import {
   parseFaceitMatchId, summarizeFaceitMatch,
   type FaceitMatchDetail, type FaceitMatchStats,
@@ -190,4 +191,45 @@ export async function inspectFaceitQueue() {
     note: 'FACEIT returned 404 from the documented queue details endpoint, and a club-scoped filtered lookup did not identify the selected queue. This does NOT prove the queue is invalid or the owner lacks permissions. New Club queues may not be exposed through this Data API.',
     provider: 'FACEIT Data API' as const,
   };
+}
+
+
+/**
+ * List a page of real CS2 matches through the documented Hub-match route.
+ *
+ * The sample FACEIT match reports competition_id equal to our selected queue
+ * and competition_type='hub'. That is strong routing evidence, but it does
+ * NOT prove /hubs/{queueId}/matches is available for new Club queues.
+ *
+ * All returned items must independently match queue ID, hub type and game.
+ * No tournament results, ratings or match records are written here.
+ */
+export async function readSelectedQueueHubMatches(offset: number, limit: number) {
+  const response = await faceitGet<FaceitHubMatchesResponse>(
+    '/hubs/' + NEXUS_FACEIT_QUEUE_ID + '/matches?type=past'
+    + '&offset=' + offset + '&limit=' + limit,
+  );
+  if (!response) {
+    return {
+      status: 'not_exposed' as const,
+      message: 'FACEIT returned 404 for the Hub match-history endpoint. The match competition is labeled hub, but this Club queue may not be indexed as a public Hub resource. No history has been imported.',
+      matches: [],
+      queueId: NEXUS_FACEIT_QUEUE_ID,
+      hasMore: false,
+      nextOffset: null,
+      savedToDatabase: false as const,
+    };
+  }
+
+  try {
+    return {
+      status: 'available' as const,
+      ...normalizeQueueHubMatches(response, offset, limit),
+    };
+  } catch {
+    throw new FaceitClubInspectionError(
+      'FACEIT returned an invalid Hub match-history response. No results were imported.',
+      502,
+    );
+  }
 }
