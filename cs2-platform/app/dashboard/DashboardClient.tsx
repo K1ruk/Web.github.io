@@ -312,14 +312,13 @@ export function DashboardClient({
             {stats.available && stats.played === 0 && <p className="gamer-data-note">{mn ? 'Албан ёсны тоглолтын үр дүн гармагц таны үзүүлэлт энд харагдана.' : 'Your record will appear here once official match results are published.'}</p>}
           </section>
 
-          <section className="gamer-achievements" aria-labelledby="gamer-achievements-title">
-            <div className="gamer-section-top">
-              <div>
-                <span className="section-kicker">{mn ? 'ТОГЛОГЧИЙН АМЖИЛТ' : 'PLAYER PROGRESSION'} / 01</span>
-                <h2 id="gamer-achievements-title">{mn ? 'АМЖИЛТУУД' : 'Achievements'}<span className="gamer-heading-accent">.</span></h2>
-              </div>
-              <span className="gamer-earned-counter"><strong>{earnedCount}</strong> / {achievements.length} {mn ? 'НЭЭГДСЭН' : 'UNLOCKED'}</span>
-            </div>
+          <details className="gamer-achievements nx-gamer-achievements-collapsed">
+            <summary className="nx-gamer-achievements-summary">
+              <span><small className="section-kicker">PLAYER PROGRESSION</small>
+                <strong>{mn?'Амжилтууд':'Achievements'}</strong>
+              </span>
+              <span>{earnedCount} / {achievements.length} EARNED <i aria-hidden="true">⌄</i></span>
+            </summary>
             <div className="gamer-achievements-grid">
               {achievements.map(achievement => (
                 <div className={'gamer-achievement' + (achievement.unlocked ? ' unlocked' : ' locked')} key={achievement.id}>
@@ -332,7 +331,7 @@ export function DashboardClient({
                 </div>
               ))}
             </div>
-          </section>
+          </details>
         </div>
 
         <aside className="gamer-sidebar">
