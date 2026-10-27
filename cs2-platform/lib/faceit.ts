@@ -1,5 +1,6 @@
 import 'server-only';
 import { provisionalSkill } from '@/lib/skill';
+import type { SkillContext } from '@/lib/skill';
 
 type FaceitPlayer = {
   player_id: string;
@@ -61,7 +62,7 @@ async function faceitGet<T>(path: string): Promise<T | null> {
   }
 }
 
-export async function analyzeSteam(steamId: string) {
+export async function analyzeSteam(steamId: string, context: SkillContext = {}) {
   if (!/^[0-9]{17}$/.test(steamId)) {
     throw new Error('Invalid verified Steam ID64');
   }
@@ -108,19 +109,45 @@ export async function analyzeSteam(steamId: string) {
   } catch (error) {
     // Elo remains valid even if the match-statistics endpoint fails.
     // No performance bonus is applied without a reliable sample.
-    if (error instanceof FaceitRequestError && error.code === 'invalid_key') throw error;
+    if (error instanceof FaceitRequestError && ['invalid_key', 'rate_limited'].includes(error.code)) throw error;
     statsAvailable = false;
   }
   const kd = kdValues.length
     ? kdValues.reduce((total, value) => total + value, 0) / kdValues.length
     : null;
-  const suggested = provisionalSkill(elo, kd, kdValues.length);
+  // Lifetime aggregate stats are useful for reviewing surprisingly low Elo,
+  // but are *not* proof of intentional underperformance.
+  let lifetimeStatsAvailable = false;
+  let lifetimeMatches: number | null = null;
+  let lifetimeKd: number | null = null;
+  try {
+    const aggregate = await faceitGet<{ lifetime?: Record<string, string> }>(
+      '/players/' + encodeURIComponent(player.player_id) + '/stats/cs2',
+    );
+    if (aggregate?.lifetime) {
+      lifetimeStatsAvailable = true;
+      const matchCount = Number(aggregate.lifetime['Matches']);
+      if (Number.isSafeInteger(matchCount) && matchCount >= 0) lifetimeMatches = matchCount;
+      const aggregateKd = Number(aggregate.lifetime['Average K/D Ratio']);
+      if (Number.isFinite(aggregateKd) && aggregateKd >= 0 && aggregateKd < 15) {
+        lifetimeKd = aggregateKd;
+      }
+    }
+  } catch (error) {
+    if (error instanceof FaceitRequestError && ['invalid_key', 'rate_limited'].includes(error.code)) throw error;
+  }
+  const suggested = provisionalSkill(elo, kd, kdValues.length, {
+    ...context,
+    lifetimeMatches,
+    lifetimeKd,
+  });
   return {
     found: true as const,
     playerId: player.player_id,
     nickname: player.nickname,
     faceitLevel: player.games?.cs2?.skill_level ?? null,
     statsAvailable,
+    lifetimeStatsAvailable,
     ...suggested,
   };
 }
