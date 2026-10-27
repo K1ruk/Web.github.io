@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { ClubArchiveClient } from './ClubArchiveClient';
 import { CLUB_ARCHIVE_SINCE_SECONDS } from '@/lib/club-archive';
 import type { QueueHistoryMatch } from '@/lib/faceit-hub-history';
-import { FACEIT_HISTORY_MAX_AUTO_PAGES, FACEIT_HISTORY_FULL_SCAN_PAGE_SIZE } from '@/lib/faceit-hub-history';
+import { FACEIT_HISTORY_MAX_AUTO_PAGES, FACEIT_HISTORY_FULL_SCAN_PAGE_SIZE, juneArchiveSaveMode, type HubScanStatus } from '@/lib/faceit-hub-history';
 
 type HistoryPage =
   | {
@@ -40,7 +40,7 @@ type HistoryPage =
       savedToDatabase: false;
     };
 
-type ScanState = 'idle' | 'checking' | 'scanning' | 'complete' | 'unavailable' | 'stopped' | 'partial' | 'error';
+type ScanState = HubScanStatus;
 
 function csv(value: string | number | null | undefined) {
   const raw = String(value ?? '');
@@ -72,6 +72,12 @@ export function QueueHistoryClient({
   const juneMatches = matches.filter(m=>m.finishedAt!==null
     &&m.finishedAt>=CLUB_ARCHIVE_SINCE_SECONDS
     &&m.finishedAt<=Math.floor(Date.now()/1000)+3600);
+  const archiveMode = juneArchiveSaveMode({
+    fullScanAttempted: attemptedFullScan,
+    status,
+    hasFetchedJuneMatches: juneMatches.length > 0,
+    more,
+  });
 
   async function getPage(offset: number, limit: number): Promise<HistoryPage> {
     const response = await fetch('/api/admin/faceit-club/history?offset=' + offset + '&limit=' + limit, {
@@ -299,8 +305,8 @@ export function QueueHistoryClient({
     </div>}
     <ClubArchiveClient
       matches={juneMatches}
-      historyComplete={status==='complete' && !more}
-      allowPartialSave={attemptedFullScan && !busy && (status==='partial' || status==='error' || status==='stopped')}
+      historyComplete={archiveMode==='complete'}
+      allowPartialSave={archiveMode==='partial'}
       locale={locale}
       apiConfigured={apiConfigured}
     />
