@@ -52,15 +52,24 @@ export function PlayerTournamentStatus({ snapshot, demo = false, locale = 'en' }
           ?(mn?'Түвшин батлагдсан. Баг хүлээгдэж байна':'Tier approved. Team reveal is next.')
           :(mn?'Таны баг бэлэн боллоо':'Your squad is ready.');
   const description=state==='no-entry'
-    ? 'Sign in with Discord, connect Steam, complete your player profile and register for an open event.'
+    ? 'You have no active tournament entry. Choose an open event to start your registration.'
     :state==='unconfirmed'
-      ? 'Your place is not yet confirmed. Complete registration before you can be placed on a team.'
+      ? 'You started an entry, but your place is not confirmed yet. Check the event registration page.'
       :state==='awaiting-tier'
-        ? 'You have a confirmed place. The tournament admin is reviewing FACEIT and Club evidence before approving a tier.'
+        ? 'Your registration is confirmed. Admins are reviewing your skill tier; you don't need to do anything yet.'
         :state==='tier-approved'
-          ? 'The admin has approved your tier. Your teammates remain private until team rosters are officially published.'
-          : 'Team rosters have been published. See your teammates, assigned roles and upcoming fixtures below.';
+          ? 'Your tier is approved. Team assignments stay private until the organizer publishes the rosters.'
+          : 'Your official squad is live. Check your role, teammates and upcoming matches below.';
 
+  const nextStep=state==='no-entry'
+    ? (mn?'Нээлттэй тэмцээнийг сонгож бүртгүүлнэ үү.':'Find an open tournament and register to enter.')
+    : state==='unconfirmed'
+      ? (mn?'Бүртгэлийн төлөвөө шалгаж, шаардлагатай алхмыг дуусгана уу.':'Check your registration and complete any outstanding steps.')
+      : state==='awaiting-tier'
+        ? (mn?'Зохион байгуулагч таны түвшинг батална.':'The organizer reviews your tier. No action needed.')
+        : state==='tier-approved'
+          ? (mn?'Багуудыг нийтлэхийг хүлээнэ үү.':'Wait for the official team announcement.')
+          : (mn?'Багийнхантайгаа холбогдож, тоглолтын хуваарийг шалгана уу.':'Meet your squad and check the match schedule.');
   return <section className={'nx-player-event'+(demo?' nx-player-event-demo':'')} aria-label="My tournament journey">
     <header className="nx-player-event-header">
       <div className="nx-player-event-kicker">
@@ -79,6 +88,12 @@ export function PlayerTournamentStatus({ snapshot, demo = false, locale = 'en' }
       </div>)}
     </div>
 
+    <div className="nx-player-next-step">
+      <div><span>{mn?'ДАРААГИЙН АЛХАМ':'YOUR NEXT STEP'}</span><strong>{nextStep}</strong></div>
+      {!demo&&(state==='no-entry'||state==='unconfirmed')&&<Link className="outline-button small" href="/register">
+        {mn?'БҮРТГЭЛ РҮҮ':'GO TO REGISTRATION'} <span aria-hidden="true">↗</span>
+      </Link>}
+    </div>
     {snapshot?<div className="nx-player-event-details">
       <div className="nx-player-event-summary">
         <div><small>TOURNAMENT</small><strong>{snapshot.eventName}</strong></div>
@@ -111,7 +126,6 @@ export function PlayerTournamentStatus({ snapshot, demo = false, locale = 'en' }
       </>}
     </div>:<div className="nx-player-event-empty">
       <p>You haven't confirmed an entry yet.</p>
-      {!demo&&<Link className="outline-button" href="/register">EXPLORE TOURNAMENTS <span aria-hidden="true">↗</span></Link>}
     </div>}
     {demo&&<p className="nx-player-demo-disclaimer">This shows how a real player dashboard would look at this stage. The entry, tier, squad and schedule here are examples only—no actual assignment has been published.</p>}
   </section>;
