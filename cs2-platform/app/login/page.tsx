@@ -1,6 +1,7 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import Link from 'next/link';
 import { useLocale } from '@/components/LocaleProvider';
@@ -10,9 +11,26 @@ type Busy = 'discord' | 'email' | null;
 export default function Login() {
   const { locale } = useLocale();
   const mn = locale === 'mn';
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState<Busy>(null);
+
+  // This route is for guests. Existing sessions belong on the player dashboard.
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) return;
+    const db = createBrowserClient(url, key);
+    let active = true;
+
+    db.auth.getUser().then(({ data, error }) => {
+      if (active && !error && data.user) router.replace('/dashboard');
+    }).catch(() => {});
+
+    return () => { active = false; };
+  }, [router]);
+
 
   function getAuthClient() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
