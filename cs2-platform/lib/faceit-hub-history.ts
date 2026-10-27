@@ -11,8 +11,11 @@ import { NEXUS_FACEIT_QUEUE_ID, NEXUS_FACEIT_TEST_MATCH_ID, parseFaceitMatchId }
 
 export const FACEIT_HISTORY_PAGE_SIZE = 50;
 export const FACEIT_HISTORY_MAX_OFFSET = 100000;
-export const FACEIT_HISTORY_FULL_SCAN_PAGE_SIZE = 100;
-export const FACEIT_HISTORY_MAX_AUTO_PAGES = 100;
+// Smaller pages avoid asking FACEIT for a 100-result window near the end
+// of this Club's queue history. The API documents up to 100, but the exact
+// origin of the organizer's observed later-page HTTP 400 is not confirmed.
+export const FACEIT_HISTORY_FULL_SCAN_PAGE_SIZE = 50;
+export const FACEIT_HISTORY_MAX_AUTO_PAGES = 200;
 
 export type QueueHistoryMatch = {
   matchId: string;
