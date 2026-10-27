@@ -236,7 +236,7 @@ export default async function Dashboard() {
       id:entry.id,eventName:evt?.name||'Tournament',
       eventStatus:evt?.status||'draft',
       registrationStatus:entry.status,
-      tier:entry.assigned_tier,
+      tier:entry.status==='paid'?entry.assigned_tier:null,
       teamName:revealed?team.name:null,
       assignedRole:revealed
         ?teammateMembers.find(m=>m.team_id===team.id&&m.registration_id===entry.id)?.assigned_role??null
@@ -265,7 +265,8 @@ export default async function Dashboard() {
       registrations={registrations.map(entry => ({
         ...entry,
         tournamentName: events.find(event => event.id === entry.tournament_id)?.name || 'Event',
-        teamName: members.find(member => member.registration_id === entry.id)
+        teamName: entry.status === 'paid' && visibleTournamentIds.has(entry.tournament_id)
+          && members.some(member => member.registration_id === entry.id)
           ? teamsResult.data?.find(team => team.id === members.find(member => member.registration_id === entry.id)?.team_id)?.name || null
           : null,
       }))}
