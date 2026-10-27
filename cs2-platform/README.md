@@ -90,6 +90,70 @@ Create a server-side FACEIT Data API key at https://developers.faceit.com/ (see 
 
 **Payment confirmation occurs only after verified Stripe webhooks.** Returning to the success page never marks a player paid.
 
+## First tournament — registration → manual tier → reviewed teams
+
+NEXUS first-tournament workflow intentionally **does not** use round-based
+KAST or automated post-tournament skill upgrades. The current tournament
+is the controlled baseline; later tournament performances may inform tier
+improvements after reliable demo/round-event data can be obtained.
+
+1. **Admin** opens `/admin` → **CREATE EVENT**. Choose a real name, unique
+   slug, capacity divisible by five, and an entry fee. **0 is a free event**;
+   any amount greater than zero uses verified Stripe checkout and requires
+   published HTTPS tournament rules and refund policy. Create a draft, then
+   select it and choose **OPEN REGISTRATION**. The visual-only BVG demo does
+   not accept registration.
+2. **Player** signs in with Discord (the trusted OAuth identity must be in
+   Supabase `app_metadata`, not editable profile metadata), verifies Steam
+   via OpenID, sets a nickname and two different preferred CS2 roles in
+   `/dashboard`, chooses the real tournament at `/register`, reads and
+   accepts the event rules, and registers. Free entries are confirmed
+   transactionally by `confirm_free_tournament_entry`; there is no payment
+   record or Stripe call. Paid events continue through Stripe and verified
+   webhooks. The existing internal `registrations.status='paid'` represents
+   **confirmed participation** for *both* successful free and paid entries;
+   it must not be interpreted as proof a free entrant spent money.
+3. **Admin** sees confirmed entrants in `/admin`. Click
+   **REVIEW / TIER** to resolve the entrant's already-verified Steam ID64 to
+   a FACEIT player ID via the official Data API. NEXUS caches the
+   verified mapping in private `nexus_verified_faceit_links` and compares
+   it to the stored June 2026+ FACEIT Club archive. Displayed evidence:
+   verified FACEIT nickname/ID, unique Club matches, maps sampled,
+   ADR, K/D, real `Entry Wins / Entry Count`, provisional lobby-relative
+   NEXUS Match Rating, and unavailable KAST explicitly marked as such.
+   An entrant with no matching Club maps remains eligible for manual tier
+   review; this is not automatic evidence of weak skill.
+4. Admin enters a **Tier 1–5**, independent **0–100 balancing score**, and
+   a review reason of at least 15 characters when manual assessment or
+   downward/flagged adjustment applies. **APPROVE TIER** records the decision
+   in `skill_assessments` and `admin_audit`. The optional FACEIT Scan
+   remains supporting evidence, not an automated approval.
+5. After registration is closed, admin chooses **LOCK REGISTRATION**.
+   **PREVIEW TEAMS** proposes five-player, role-aware balanced teams using
+   admin-approved scores. Admin can **swap players** across teams and
+   **adjust roles**, see each squad's mean score, and explicitly select
+   **PUBLISH REVIEWED TEAMS**. The server + database revalidate the exact
+   roster, including all confirmed registrants being approved, no
+   duplicate/missing registration, and no outstanding payment holds.
+   Publishing is a one-way action requiring confirmation.
+6. After the tournament, official results can be recorded. **Actual**
+   tournament demo/round statistics and post-tournament changes to skill
+   tiers are future work; they are not inferred from manual scores or
+   the old Club match data.
+
+For an entry-fee-free first event, `/rules` supplies a basic starter
+conduct and tournament-rules document. Edit these before accepting real
+players; paid events must have an explicit external rules URL and refund
+policy URL configured. The NEXUS administrator must configure private
+`SUPABASE_SECRET_KEY` and `FACEIT_API_KEY` in the local/server environment;
+Vercel preview does not automatically inherit local `.env.local` values.
+
+**Security:** Only NEXUS admin sessions may view arbitrary registrants'
+Club evidence or approve tiers. Verified Steam→FACEIT identity is based
+on the FACEIT response to the OpenID-verified Steam ID, not a user-submitted
+nickname or Faceit URL. No auto-tiering, result import or payment bypass
+is enabled.
+
 ## June 2026+ FACEIT Club archive & original NEXUS Match Rating
 
 **Scope:** exactly one queue, `26ca1fb5-eb37-4b3c-9005-402eca7a9008`.
