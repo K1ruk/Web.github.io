@@ -217,3 +217,12 @@
 @media(max-width:720px){.gamer-page{padding-top:37px;padding-bottom:80px}.gamer-greeting{margin:27px 0;display:block}.gamer-greeting h1{font-size:clamp(43px,8.5vw,67px)}.gamer-header-cta{margin-top:18px}.gamer-setup-bar{flex-wrap:wrap;gap:13px}.gamer-setup-progress{order:4;flex:1;min-width:85px}.gamer-setup-action{margin-left:auto}.gamer-sidebar{display:flex}.gamer-achievements-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gamer-achievement{flex-wrap:nowrap}.gamer-achievement-copy{width:auto}.gamer-registrations{margin-top:49px}.gamer-entry-grid{grid-template-columns:1fr}}
 @media(max-width:510px){.gamer-top-actions{gap:12px}.gamer-id-card{padding:20px 15px}.gamer-id-edition{display:none}.gamer-id-main{flex-wrap:wrap;gap:14px;padding:26px 0}.gamer-avatar{width:76px;height:76px}.gamer-avatar-inner{width:65px;height:65px;font-size:25px}.gamer-rank-marker{border-left:0;border-top:1px solid #ffffff20;max-width:none;width:100%;flex-direction:row;justify-content:space-between;gap:10px;padding:10px 0 0}.gamer-rank-marker strong{font-size:26px}.gamer-identity-text h2{font-size:32px}.gamer-stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.gamer-stat{min-height:90px;padding:13px 11px}.gamer-stat strong{font-size:27px}.gamer-stats-heading>small{line-height:1.5}.gamer-achievements-grid{grid-template-columns:1fr}.gamer-achievement{min-height:72px}.gamer-section-top{align-items:start}.gamer-earned-counter{padding-top:9px}.gamer-empty-entries{padding:19px;gap:15px}.gamer-empty-mark{width:43px;height:43px;font-size:23px}}
 @media(prefers-reduced-motion:reduce){.gamer-next-event,.gamer-settings-chevron,.gamer-signout-button,.gamer-setup-action{transition:none}}
+
+
+/* Provider photos replace text initials in the account connections. */
+.gamer-avatar-inner{overflow:hidden}
+.gamer-avatar-photo{display:block;width:100%;height:100%;object-fit:cover;border-radius:15px}
+.gamer-provider-mark{overflow:hidden;position:relative}
+.gamer-provider-photo{display:block;width:100%;height:100%;object-fit:cover;border-radius:6px}
+.gamer-avatar-fallback{width:17px;height:17px;display:block;color:#b7b2ad}
+.gamer-avatar-inner .gamer-avatar-fallback{width:40px;height:40px}
