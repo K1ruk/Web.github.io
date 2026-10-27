@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {
   NEXUS_FACEIT_CLUB_ID, NEXUS_FACEIT_CLUB_URL,
   NEXUS_FACEIT_TEST_MATCH_ID, NEXUS_FACEIT_TEST_MATCH_URL,
-  parseFaceitMatchId, summarizeFaceitMatch,
+  NEXUS_FACEIT_QUEUE_ID, NEXUS_FACEIT_QUEUE_URL,
+  parseFaceitMatchId, summarizeFaceitMatch, summarizeFaceitQueue,
 } from '../lib/faceit-club.ts';
 
 const uuid = '12345678-1234-4321-a123-123456789abc';
@@ -15,6 +16,73 @@ test('Club reference is the supplied FACEIT Club URL, not an assumed Hub ID', ()
     'https://www.faceit.com/en/club/a89ac9ff-8702-40df-b62d-8140719d481e/parties');
 });
 
+
+test('tracks precisely the one user-selected Club queue, not all Club queues', () => {
+  assert.equal(NEXUS_FACEIT_QUEUE_ID, '26ca1fb5-eb37-4b3c-9005-402eca7a9008');
+  assert.equal(NEXUS_FACEIT_QUEUE_URL,
+    'https://www.faceit.com/en/club/a89ac9ff-8702-40df-b62d-8140719d481e/queue/26ca1fb5-eb37-4b3c-9005-402eca7a9008');
+});
+
+test('queue permission result is interpreted only for the exact selected CS2 queue', () => {
+  const returned = summarizeFaceitQueue({
+    id: NEXUS_FACEIT_QUEUE_ID,
+    game: 'cs2',
+    queueName: 'Seasonal Hub',
+    region: 'EU',
+    entityType: 'hub',
+    entityId: 'a-valid-hub-entity',
+    organizerId: 'an-organizer-id',
+    open: true,
+    paused: false,
+    calculateElo: false,
+    state: 'active',
+    minSkill: 1,
+    maxSkill: 10,
+  });
+  assert.equal(returned.name, 'Seasonal Hub');
+  assert.equal(returned.queueId, NEXUS_FACEIT_QUEUE_ID);
+  assert.equal(returned.game, 'cs2');
+  assert.equal(returned.entityType, 'hub');
+  assert.equal(returned.entityIdMatchesProvidedClub, false);
+  assert.equal(returned.clubQueueOwnershipVerified, false);
+  assert.equal(returned.matchHistoryAvailable, false);
+  assert.equal(returned.open, true);
+  assert.equal(returned.calculateElo, false);
+  assert.throws(() => summarizeFaceitQueue({ id: 'different-id', game: 'cs2' }), /mismatching queue/);
+  assert.throws(() => summarizeFaceitQueue({ id: NEXUS_FACEIT_QUEUE_ID, game: 'csgo' }), /mismatching queue/);
+});
+
+test('matching entity ID is reported without claiming FACEIT owner identity or history access', () => {
+  const returned = summarizeFaceitQueue({
+    id: NEXUS_FACEIT_QUEUE_ID,
+    game: 'cs2',
+    entityId: NEXUS_FACEIT_CLUB_ID,
+    entityType: 'club',
+    queueName: '<potentially untrusted provider name>'.repeat(12),
+  });
+  assert.equal(returned.entityIdMatchesProvidedClub, true);
+  assert.equal(returned.clubQueueOwnershipVerified, false);
+  assert.equal(returned.matchHistoryAvailable, false);
+  assert.ok(returned.name.length <= 160);
+});
+
+test('unsupported queue stats remain unknown instead of fabricated', () => {
+  const returned = summarizeFaceitQueue({
+    id: NEXUS_FACEIT_QUEUE_ID,
+    game: 'cs2',
+    queueName: 'Queue',
+    open: 'false',
+    paused: 0,
+    minSkill: -1,
+    maxSkill: 9999999,
+  });
+  assert.equal(returned.open, null);
+  assert.equal(returned.paused, null);
+  assert.equal(returned.region, null);
+  assert.equal(returned.minSkill, null);
+  assert.equal(returned.maxSkill, null);
+  assert.equal(returned.matchHistoryAvailable, false);
+});
 
 test('the organizer-provided matchroom is a valid, well-formed CS2 FACEIT identifier', () => {
   assert.equal(NEXUS_FACEIT_TEST_MATCH_ID, '1-1aaee7dd-bf23-44b6-b043-a96fc7586ce9');
