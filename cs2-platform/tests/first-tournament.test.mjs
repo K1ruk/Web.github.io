@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { hasVerifiedDiscordProvider } from '../lib/discord-auth.ts';
 import { summarizeFirstTournamentBaseline } from '../lib/first-tournament-baseline.ts';
-import { isRosterDraft, swapRosterPlayers } from '../lib/roster-draft.ts';
+import { isRosterDraft, swapRosterPlayers, rosterIncludesExactly } from '../lib/roster-draft.ts';
 
 test('only trusted Supabase app_metadata identifies verified Discord OAuth',()=>{
   assert.equal(hasVerifiedDiscordProvider({providers:['email','discord']}),true);
@@ -78,4 +78,17 @@ test('a malformed roster cannot be presented as reviewed',()=>{
   assert.equal(isRosterDraft(null),false);
   assert.equal(isRosterDraft([[]]),false);
   assert.equal(isRosterDraft([[{registration_id:'p0',assigned_role:'CEO'}]]),false);
+});
+
+test('publish preflight requires every confirmed player exactly once',()=>{
+  const teams=draft();
+  const players=teams.flat().map(p=>p.registration_id);
+  assert.equal(rosterIncludesExactly(teams,players),true);
+  assert.equal(rosterIncludesExactly(teams,players.slice(0,9)),false);
+  assert.equal(rosterIncludesExactly(teams,[...players,'p10']),false);
+  assert.equal(rosterIncludesExactly(teams,['p0',...players.slice(0,9)]),false);
+  const duplicated=draft();
+  duplicated[1][0].registration_id='p0';
+  assert.equal(isRosterDraft(duplicated),false);
+  assert.equal(rosterIncludesExactly(duplicated,players),false);
 });
