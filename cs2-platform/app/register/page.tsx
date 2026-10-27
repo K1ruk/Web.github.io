@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { adminDb } from '@/lib/supabase/admin';
 import { RegistrationClient } from './RegistrationClient';
-import type { PublicTournament } from '@/lib/registration';
+import { BVG_FRIENDS_LEAGUE_DEMO, type PublicTournament } from '@/lib/registration';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,10 +73,12 @@ export default async function Register() {
   }
 
   const countById = new Map(counts.map(result => [result.id, result.count || 0]));
-  const tournaments: PublicTournament[] = events.map(event => ({
-    ...event,
-    confirmed: countById.get(event.id) || 0,
-  }));
+  const tournaments: PublicTournament[] = events.length
+    ? events.map(event => ({
+        ...event,
+        confirmed: countById.get(event.id) || 0,
+      }))
+    : [BVG_FRIENDS_LEAGUE_DEMO];
 
   const rulesUrl = policyUrl(process.env.NEXT_PUBLIC_TOURNAMENT_RULES_URL);
   const refundUrl = policyUrl(process.env.NEXT_PUBLIC_REFUND_POLICY_URL);
