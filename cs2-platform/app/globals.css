@@ -476,3 +476,21 @@
 .faceit-breakdown-notice,.faceit-stats-unavailable{font-size:11px;color:#aaa09a;line-height:1.8;margin:18px 0 0}
 .faceit-stats-unavailable{border-top:1px solid #ffffff1d;padding-top:18px}
 @media(max-width:550px){.faceit-area-grid{gap:7px}.faceit-area{padding:12px}.faceit-area>strong{font-size:19px}.faceit-stats-table td,.faceit-stats-table th{padding:10px 7px}}
+
+
+/* FACEIT core four: the only statistics emphasized in NEXUS rating reviews */
+.faceit-core-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.faceit-core-card{border:1px solid #ffffff22;background:linear-gradient(140deg,#151414,#0b0a0b);border-radius:12px;padding:21px;display:flex;flex-direction:column;gap:13px;min-width:0}
+.faceit-core-card-heading{display:flex;justify-content:space-between;align-items:start;gap:8px;flex-wrap:wrap}
+.faceit-core-card-heading strong{font-size:14px;letter-spacing:.055em;color:#f1dfd2}
+.faceit-core-card-heading small{font:9px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.05em;color:#998f89;line-height:1.6}
+.faceit-core-score{font:730 clamp(28px,3vw,43px) ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:-.065em;line-height:1.1;color:#ffb17e;min-height:45px;display:flex;flex-direction:column;gap:8px}
+.faceit-core-missing{font:9px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em;color:#aa9b91}
+.faceit-core-samples{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;font-size:10px;line-height:1.5;color:#b6aaa2}
+.faceit-core-samples span{display:block;white-space:nowrap}
+.faceit-core-samples small{font-size:9px;color:#8f8580}
+.faceit-core-contribution{border-top:1px solid #ffffff1c;padding-top:11px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.faceit-core-contribution span{font-size:9px;letter-spacing:.09em;color:#998e86}
+.faceit-core-contribution strong{font:600 16px ui-monospace,SFMono-Regular,Consolas,monospace;color:#e9a57b}
+.faceit-core-contribution strong small{font-size:10px;color:#857e78}
+@media(max-width:680px){.faceit-core-grid{grid-template-columns:1fr}.faceit-core-card{padding:18px}.faceit-core-score{font-size:36px}}
