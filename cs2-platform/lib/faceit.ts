@@ -31,7 +31,7 @@ export function faceitConfigured() {
   return !!key && !/^(YOUR_|your-|PLACEHOLDER)/i.test(key);
 }
 
-async function faceitGet<T>(path: string): Promise<T | null> {
+export async function faceitGet<T>(path: string): Promise<T | null> {
   const key = process.env.FACEIT_API_KEY?.trim();
   if (!faceitConfigured() || !key) {
     throw new FaceitRequestError('not_configured', 'FACEIT_API_KEY is missing. Add a server-side FACEIT Data API key to .env.local and restart the server.');
