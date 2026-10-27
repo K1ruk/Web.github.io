@@ -14,7 +14,7 @@ type FaceitHistory = {
   items?: Array<{ stats?: Record<string, unknown> }>;
 };
 
-export type FaceitFailureCode = 'not_configured' | 'invalid_key' | 'rate_limited' | 'unavailable' | 'timeout' | 'invalid_response';
+export type FaceitFailureCode = 'not_configured' | 'invalid_key' | 'permission_denied' | 'rate_limited' | 'unavailable' | 'timeout' | 'invalid_response';
 
 export class FaceitRequestError extends Error {
   constructor(
@@ -31,7 +31,7 @@ export function faceitConfigured() {
   return !!key && !/^(YOUR_|your-|PLACEHOLDER)/i.test(key);
 }
 
-export async function faceitGet<T>(path: string): Promise<T | null> {
+export async function faceitGet<T>(path: string, options: { organizerEndpoint?: boolean } = {}): Promise<T | null> {
   const key = process.env.FACEIT_API_KEY?.trim();
   if (!faceitConfigured() || !key) {
     throw new FaceitRequestError('not_configured', 'FACEIT_API_KEY is missing. Add a server-side FACEIT Data API key to .env.local and restart the server.');
@@ -47,8 +47,17 @@ export async function faceitGet<T>(path: string): Promise<T | null> {
     throw new FaceitRequestError('timeout', 'FACEIT could not be reached. Please try again.');
   }
   if (response.status === 404) return null;
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     throw new FaceitRequestError('invalid_key', 'FACEIT rejected the API key. Check the server-side key in your environment settings.');
+  }
+  if (response.status === 403) {
+    if (options.organizerEndpoint) {
+      throw new FaceitRequestError(
+        'permission_denied',
+        'FACEIT denied access to this organizer-only queue endpoint (403). Being the Club owner does not automatically grant your developer API key queue permissions. Ask FACEIT Developer Support to enable organizer access for this queue and key.',
+      );
+    }
+    throw new FaceitRequestError('invalid_key', 'FACEIT denied this API request. Check your server-side API key and provider permissions.');
   }
   if (response.status === 429) {
     throw new FaceitRequestError('rate_limited', 'FACEIT is rate-limiting requests. Try again after the limit resets.');
