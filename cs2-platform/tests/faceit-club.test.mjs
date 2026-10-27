@@ -5,6 +5,7 @@ import {
   NEXUS_FACEIT_TEST_MATCH_ID, NEXUS_FACEIT_TEST_MATCH_URL,
   NEXUS_FACEIT_QUEUE_ID, NEXUS_FACEIT_QUEUE_URL,
   parseFaceitMatchId, summarizeFaceitMatch, summarizeFaceitQueue,
+  selectedQueueFromList, FACEIT_CLUB_ENTITY_TYPES,
 } from '../lib/faceit-club.ts';
 
 const uuid = '12345678-1234-4321-a123-123456789abc';
@@ -200,4 +201,35 @@ test('sanitizes user-facing strings from provider and does not pass raw player d
   assert.equal(result.maps[0].teams[0].players[0].kills,null);
   assert.equal(result.maps[0].teams[0].players[0].deaths,null);
   assert.equal('raw' in result,false);
+});
+
+
+test('entity-filtered fallback attempts only documented FACEIT queue filters', () => {
+  assert.deepEqual(FACEIT_CLUB_ENTITY_TYPES, ['clan', 'club', 'hub']);
+});
+
+test('selected queue discovery requires the exact queue, game, and supplied Club entity', () => {
+  const good = {
+    id: NEXUS_FACEIT_QUEUE_ID,
+    game: 'cs2',
+    entityId: NEXUS_FACEIT_CLUB_ID,
+    entityType: 'clan',
+    queueName: 'NEXUS organizer queue',
+  };
+  assert.deepEqual(selectedQueueFromList({ items: [
+    { ...good, id: 'someone-else-queue' },
+    { ...good, entityId: 'someone-else-club' },
+    good,
+  ] }), good);
+  assert.equal(selectedQueueFromList({ items: [{ ...good, entityId: 'another' }] }), null);
+  assert.equal(selectedQueueFromList({ items: [{ ...good, game: 'csgo' }] }), null);
+  assert.equal(selectedQueueFromList({ items: [{ ...good, id: 'someone-else-queue' }] }), null);
+});
+
+test('an incomplete or missing API list never fabricates a Club queue', () => {
+  assert.equal(selectedQueueFromList(null), null);
+  assert.equal(selectedQueueFromList({}), null);
+  assert.equal(selectedQueueFromList({ items: null }), null);
+  assert.equal(selectedQueueFromList({ items: [] }), null);
+  assert.equal(selectedQueueFromList({ items: ['untrusted', 3, null] }), null);
 });
