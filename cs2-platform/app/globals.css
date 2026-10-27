@@ -1099,3 +1099,13 @@ body{background:radial-gradient(ellipse at 76% -8%,#9264430d,transparent 37%),#0
   .nx-control-workspace>.panel{padding:18px}
   .nx-control-filter-row .field{flex:1 1 100%}
 }
+
+/* Player dashboard: explicit next action above private tournament data. */
+.nx-player-next-step{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px 22px;margin-top:20px;background:#e6a3710c;border:1px solid #e6a3713d;border-radius:10px}
+.nx-player-next-step>div{display:flex;flex-direction:column;gap:7px;min-width:0}
+.nx-player-next-step span{font-size:10px;letter-spacing:.14em;font-weight:780;color:#dca779}
+.nx-player-next-step strong{font-size:13px;font-weight:570;color:#eeeae3;line-height:1.65}
+.nx-player-next-step .outline-button{flex-shrink:0}
+.nx-player-event-empty{color:#aaa39b}
+.nx-player-event-kicker>span:first-child{color:#dca779}
+@media(max-width:600px){.nx-player-next-step{align-items:flex-start;flex-direction:column;padding:16px}.nx-player-next-step .outline-button{width:100%;justify-content:space-between}}
