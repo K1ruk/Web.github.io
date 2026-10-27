@@ -13,6 +13,24 @@ export function AdminClient({tournaments,registrations,teams,matches}:{tournamen
  async function createEvent(e:FormEvent<HTMLFormElement>){e.preventDefault();const fd=new FormData(e.currentTarget);const capacity=Number(fd.get('capacity')),feeCents=Math.round(Number(fd.get('fee'))*100);await run(async()=>{await api('POST','/api/admin/tournaments',{name:fd.get('name'),slug:fd.get('slug'),capacity,feeCents,currency:fd.get('currency')});return 'Tournament created. Refresh to select it.';});}
  async function lookup(){await run(async()=>{const result=await api('POST','/api/admin/lookup',{url:lookupUrl});setLookupResult(result);return 'Steam URL analyzed. Identity ownership is NOT verified by URL lookup.';});}
  async function analyze(id:string){setActiveReg(id);setAnalysis(null);setNote('');await run(async()=>{const r=await api('POST','/api/admin/analyze',{registrationId:id});setAnalysis(r);if(r.found){setTier(String(r.tier));setScore(String(r.score));}return r.found?'FACEIT analysis loaded. Verify evidence before approval.':r.reason;});}
+ async function reviewStored(id:string){
+  setActiveReg(id);setAnalysis(null);setNote('');
+  await run(async()=>{
+    const response=await fetch('/api/admin/analyze?registrationId='+encodeURIComponent(id),{
+      method:'GET',credentials:'same-origin',headers:{Accept:'application/json'},
+    });
+    const saved=await response.json().catch(()=>null);
+    if(!response.ok)throw new Error(saved?.error||'Could not load saved FACEIT assessment');
+    setAnalysis(saved);
+    if(saved.found && saved.tier!=null && saved.score!=null){
+      setTier(String(saved.tier));
+      setScore(String(saved.score));
+    }
+    return saved.found
+      ? 'Saved FACEIT evidence loaded without another API call. Review and approve the proposed rating.'
+      : 'No FACEIT ranking was available. Review this player manually and document your decision.';
+  });
+}
  async function analyzeBatch(){
   if(!selected)return;
   await run(async()=>{
@@ -50,7 +68,7 @@ async function saveResult(matchId:string,e:FormEvent<HTMLFormElement>){e.prevent
     {p.assessmentStatus==='approved'?'APPROVED':p.assessmentStatus==='review'?'NEEDS REVIEW':p.assessmentStatus==='suggested'?'SUGGESTED':'NOT SCANNED'}
   </span>
   {p.assigned_tier===null&&p.suggestedTier!==null&&<span className="admin-assessment-tier">TIER {p.suggestedTier}</span>}
-</td><td><button className="outline-button small" disabled={busy||p.status!=='paid'} onClick={()=>analyze(p.id)}>FACEIT ANALYZE</button><button className="outline-button small" style={{marginLeft:8}} disabled={p.status!=='paid'} onClick={()=>{setActiveReg(p.id);setAnalysis(null);setNote('');setTier(String(p.assigned_tier||3));setScore(String(p.internal_score||50));}}>MANUAL</button></td></tr>)}</tbody></table></div>{players.length===0&&<p className="small-text">No registered entries for this tournament.</p>}</section>
+</td><td><button className="outline-button small" disabled={busy||p.status!=='paid'} onClick={()=>p.assessmentStatus==='unchecked'?analyze(p.id):reviewStored(p.id)}>{p.assessmentStatus==='unchecked'?'FACEIT SCAN':'REVIEW SAVED'}</button><button className="outline-button small" style={{marginLeft:8}} disabled={p.status!=='paid'} onClick={()=>{setActiveReg(p.id);setAnalysis(null);setNote('');setTier(String(p.assigned_tier||3));setScore(String(p.internal_score||50));}}>MANUAL</button></td></tr>)}</tbody></table></div>{players.length===0&&<p className="small-text">No registered entries for this tournament.</p>}</section>
 
  {activeReg && <section className="panel admin-wide">
   <div className="section-kicker">04 / TIER REVIEW</div>
