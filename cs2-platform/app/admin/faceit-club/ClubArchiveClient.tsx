@@ -20,9 +20,10 @@ type ImportRecord={matchId:string;status:string;playerMaps:number};
 const nice=(value:number|null,digits=2,suffix='')=>value===null?'—':value.toFixed(digits)+suffix;
 
 export function ClubArchiveClient({
-  matches,historyComplete,locale,apiConfigured,
+  matches,historyComplete,allowPartialSave,locale,apiConfigured,
 }:{
   matches:QueueHistoryMatch[];historyComplete:boolean;
+  allowPartialSave:boolean;
   locale:'mn'|'en';apiConfigured:boolean;
 }){
   const mn=locale==='mn';
@@ -58,7 +59,7 @@ export function ClubArchiveClient({
   }
 
   async function saveAllJune(){
-    if(busy||!historyComplete||!filtered.length)return;
+    if(busy||(!historyComplete&&!allowPartialSave)||!filtered.length)return;
     cancel.current=false;
     setBusy(true);setSaved(0);setProcessed(0);setIssues([]);setError('');setFinished(false);
     const newIssues:string[]=[];
@@ -116,9 +117,11 @@ export function ClubArchiveClient({
     </div>
     <div className="faceit-history-actions">
       <button className="lab-run-button faceit-history-run" type="button"
-        disabled={!apiConfigured||!historyComplete||!filtered.length||busy} onClick={saveAllJune}>
+        disabled={!apiConfigured||(!historyComplete&&!allowPartialSave)||!filtered.length||busy} onClick={saveAllJune}>
         {busy?(mn?'ХАДГАЛЖ БАЙНА...':'SAVING VERIFIED MATCH STATS...')
-          :(mn?'6-Р САРААС ХОЙШХ БҮХ ТОГЛОЛТЫГ ХАДГАЛАХ':'SAVE ALL JUNE+ MATCHES & PLAYER STATS')}
+          : historyComplete
+            ? (mn?'6-Р САРААС ХОЙШХ БҮХ ТОГЛОЛТЫГ ХАДГАЛАХ':'SAVE ALL FETCHED JUNE+ MATCHES & PLAYER STATS')
+            : (mn?'ОЛДСОН 6-Р САРЫН ТОГЛОЛТУУДЫГ ХАДГАЛАХ':'SAVE FETCHED JUNE+ MATCHES (PARTIAL HISTORY)')}
       </button>
       {busy&&<button className="outline-button" onClick={()=>{cancel.current=true;}} type="button">STOP AFTER BATCH</button>}
       <button className="outline-button" type="button" disabled={busy||refreshing} onClick={loadOverview}>
@@ -126,14 +129,22 @@ export function ClubArchiveClient({
       </button>
     </div>
     {!historyComplete&&<p className="faceit-history-message caution">
-      {mn
-        ? 'Эхлээд SCAN AVAILABLE QUEUE HISTORY дарж бүх боломжит хуудсыг татаж дуусгана уу. Зөвхөн эхний 50 тоглолтыг шалгасан бол архив бүрэн болохгүй.'
-        : 'First run SCAN AVAILABLE QUEUE HISTORY to completion. Testing only the first 50 matches cannot establish the complete June archive.'}
+      {allowPartialSave
+        ? (mn
+          ? 'FACEIT-ийн API бүх түүхийг баталгаажуулж дуусаагүй. Доорх Save товч зөвхөн одоогоор татсан, 2026-06-01-ээс хойших тоглолтын ID-уудыг дахин FACEIT-аар шалгаж хадгална. Дутуу тоглолт байж болно. Дараа нь дахин скан хийн нэмэлт тоглолтуудыг хадгалж болно.'
+          : 'INCOMPLETE HISTORY — FACEIT rejected or stopped a later page. You may now save only the June+ match IDs already fetched. Every match will be reverified by FACEIT before saving. Some other June matches may still be missing; rerun later to add them. This does NOT mark the full queue history as complete.')
+        : (mn
+          ? 'Эхлээд SCAN AVAILABLE QUEUE HISTORY дарна уу. Зөвхөн эхний 50 тоглолтыг шалгасан нь бүх түүхийг батлахгүй.'
+          : 'Run SCAN AVAILABLE QUEUE HISTORY first. A first-page test alone is not enough to enable archiving.')}
     </p>}
     {historyComplete&&filtered.length===0&&<p className="faceit-history-message caution">
       No verified matches dated June 1, 2026 or later were found in this scan.
     </p>}
-    {finished&&<p className="faceit-history-message">This import run completed. Already-saved matches were skipped; newly saved match and player-map records are available below.</p>}
+    {finished&&<p className="faceit-history-message">
+      {historyComplete
+        ? 'Import finished for the scanned June+ matches. Existing saved matches were skipped.'
+        : 'Partial import finished for the verified fetched June+ matches only. FACEIT queue history remains incomplete; more matches may need importing later.'}
+    </p>}
     {issues.length>0&&<p className="faceit-history-message caution">
       {issues.length} match(es) could not be fully imported: {issues.slice(0,4).join('; ')}
     </p>}
