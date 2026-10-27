@@ -11,3 +11,71 @@
 .steam-link-card p{margin:0}
 .steam-link-card .outline-button{margin-top:5px}
 .steam-link-error{color:#ffb099!important;font-size:12px;line-height:1.7;padding:12px 14px;background:#f77a3c0b;border:1px solid #f77a3c50;border-radius:10px;width:100%}
+
+
+/* Player portal — dark editorial account experience */
+.account-page{max-width:1280px;padding-top:61px}
+.account-overline{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.account-session{font-size:10px;letter-spacing:.16em;font-weight:650;color:#b9b7b3;white-space:nowrap;display:inline-flex;align-items:center;gap:10px}
+.account-live-dot{width:7px;height:7px;border-radius:50%;background:#a1c9a5;box-shadow:0 0 11px #a1c9a560}
+.account-heading-row{display:flex;justify-content:space-between;align-items:flex-end;gap:25px;margin-top:18px}
+.account-heading{font-size:clamp(64px,10vw,128px);margin:16px 0 16px;line-height:.93}
+.account-intro{max-width:585px;margin:0}
+.account-signout{flex-shrink:0;margin-bottom:7px}
+.account-progress{padding:26px 29px 23px;border:1px solid #ffffff21;background:radial-gradient(circle at 100% 0%,#f77a3c0e,transparent 45%),#101010;border-radius:20px;margin:38px 0 18px}
+.account-progress-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.account-progress-header strong{font:600 14px ui-monospace,SFMono-Regular,Consolas,monospace;color:#f39b69}
+.account-progress-track{height:3px;border-radius:5px;background:#ffffff18;overflow:hidden}
+.account-progress-track span{display:block;height:100%;background:#f77a3c;transition:width .28s ease}
+.account-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:26px}
+.account-step{display:flex;align-items:flex-start;gap:13px;min-width:0;opacity:.58}
+.account-step.is-complete{opacity:1}
+.account-step-index{font:11px ui-monospace,SFMono-Regular,Consolas,monospace;color:#f77a3c;border:1px solid #f77a3c55;border-radius:8px;padding:7px 9px}
+.account-step strong{display:block;font-size:11px;letter-spacing:.13em;font-weight:750;line-height:1.5}
+.account-step small{display:block;font:10px ui-monospace,SFMono-Regular,Consolas,monospace;color:#918b86;margin-top:6px;letter-spacing:.1em}
+.account-step-mark{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:#e4ae8d}
+.account-main-grid{display:grid;grid-template-columns:minmax(0,1.38fr) minmax(310px,.88fr);gap:18px;align-items:start}
+.account-profile-panel,.account-connection-panel,.account-next-panel{padding:30px}
+.account-panel-topline{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.account-profile-panel h2,.account-section-title h2{font-size:clamp(26px,3.2vw,38px);letter-spacing:-.065em;line-height:1.15;font-weight:770}
+.account-profile-panel h2{margin:32px 0 10px}
+.account-profile-panel>.small-text{max-width:440px}
+.account-profile-form{margin-top:34px}
+.account-profile-form .form-row{margin-bottom:23px}
+.account-role-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.account-form-bottom{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:31px}
+.account-helper-text{font-size:11px;color:#817e7b}
+.account-profile-form .success{margin:20px 0 0}
+.account-profile-form .steam-link-error{margin:20px 0 0}
+.account-aside{display:grid;gap:18px}
+.account-connection-row{display:flex;gap:15px;align-items:center;padding:21px 0;border-bottom:1px solid #ffffff1b;min-width:0}
+.account-connection-row:first-of-type{margin-top:15px}
+.account-connection-symbol{height:43px;width:43px;display:grid;place-items:center;border:1px solid #ffffff2a;border-radius:12px;background:#ffffff08;flex-shrink:0;font-size:18px;font-weight:850;letter-spacing:-.05em}
+.account-connection-details{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}
+.account-connection-details strong{font-size:12px;letter-spacing:.13em}
+.account-connection-details small,.account-steam-id{font-size:11px;color:#989491;overflow-wrap:anywhere;line-height:1.5}
+.account-steam-id{text-decoration:underline;text-decoration-color:#ffffff45;text-underline-offset:4px}
+.account-steam-id:hover{color:#f3ad86}
+.account-connected-indicator{height:23px;width:23px;flex-shrink:0;display:grid;place-items:center;border-radius:50%;background:#f77a3c20;color:#e8a886;font-size:12px}
+.account-connected-indicator.pending{background:#ffffff11;color:#8d8985}
+.account-connect-steam{margin-top:21px;width:100%;justify-content:space-between}
+.account-next-panel{background:radial-gradient(circle at 100% 0%,#f77a3c16,transparent 65%),#111}
+.account-next-panel p{font-size:14px;line-height:1.75;color:#cac1bb;margin:24px 0}
+.account-next-action{width:100%;justify-content:space-between}
+.account-tournaments{margin-top:55px}
+.account-section-title{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:22px}
+.account-section-title h2{margin:18px 0 0}
+.account-empty-state{border:1px dashed #ffffff31;border-radius:18px;padding:38px;display:flex;gap:28px;align-items:center;background:#ffffff03}
+.account-empty-index{font:500 38px ui-monospace,SFMono-Regular,Consolas,monospace;color:#f77a3c4c}
+.account-empty-state strong{font-size:13px;letter-spacing:.1em}
+.account-empty-state p{color:#aaa5a1;font-size:13px;line-height:1.7;max-width:510px;margin:12px 0 0}
+.account-registration-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.account-registration-item{padding:24px;background:#ffffff05;border:1px solid #ffffff22;border-radius:18px}
+.account-registration-head{display:flex;align-items:start;justify-content:space-between;gap:16px}
+.account-registration-head h3{font-size:20px;letter-spacing:-.04em;margin:0}
+.account-registration-meta{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:30px}
+.account-registration-meta div{border-top:1px solid #ffffff20;padding-top:16px}
+.account-registration-meta small{display:block;color:#a09b97;font-size:10px;letter-spacing:.13em;margin-bottom:10px}
+.account-registration-meta strong{font-size:15px;font-weight:640}
+@media(max-width:1000px){.account-main-grid{grid-template-columns:1fr}.account-aside{grid-template-columns:1fr 1fr}.account-steps{gap:10px}}
+@media(max-width:720px){.account-page{padding-top:47px}.account-heading-row{display:block}.account-heading{font-size:clamp(57px,12vw,82px)}.account-signout{margin-top:24px}.account-progress{padding:23px 19px}.account-steps{grid-template-columns:1fr;gap:17px}.account-step{align-items:center}.account-step-index{width:37px;text-align:center}.account-aside{grid-template-columns:1fr}.account-role-grid{grid-template-columns:1fr;gap:0}.account-profile-panel,.account-connection-panel,.account-next-panel{padding:24px}.account-section-title{align-items:start;flex-direction:column}.account-registration-list{grid-template-columns:1fr}.account-empty-state{padding:25px;gap:18px}}
