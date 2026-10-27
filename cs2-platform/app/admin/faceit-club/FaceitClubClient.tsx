@@ -299,11 +299,17 @@ export function FaceitClubClient({
           <a className="faceit-club-go" href={result.faceitUrl} target="_blank" rel="noopener noreferrer">
             {mn?'ТОГЛОЛТЫГ FACEIT ДЭЭР НЭЭХ':'VIEW SOURCE MATCHROOM'} ↗
           </a>
-          <div className="faceit-club-unverified" role="status">
-            <strong>{mn?'КЛУБИЙН ХАРЬЯАЛАЛ БАТЛАГДААГҮЙ':'CLUB ASSOCIATION NOT YET VERIFIED'}</strong>
-            <p>{mn
-              ? 'Энэ тоглолтын статистик FACEIT-ээс ирсэн боловч тухайн тоглолт яг таны Club-ийнх гэдгийг API-аар баталгаажуулаагүй. Үр дүнг NEXUS-ийн албан ёсны тэмцээнд хадгалаагүй.'
-              : 'These are FACEIT match data, but NEXUS cannot yet establish that this match belongs to your specific Club. No tournament results, player tiers, or league standings have been written.'}</p>
+          <div className={'faceit-club-unverified'+(result.queueAssociationVerified?' faceit-club-verified':'')} role="status">
+            <strong>{result.queueAssociationVerified
+              ? (mn ? 'MATCH НЬ ТАНЫ СОНГОСОН QUEUE-ИЙН ID-ТЭЙ ТААРЧ БАЙНА' : 'MATCH VERIFIED TO THE SELECTED QUEUE COMPETITION')
+              : (mn ? 'ЭНЭ QUEUE-ИЙНХ ГЭДЭГ НЬ БАТЛАГДААГҮЙ' : 'MATCH NOT VERIFIED TO THIS QUEUE')}</strong>
+            <p>{result.queueAssociationVerified
+              ? (mn
+                ? 'FACEIT competition_id нь сонгосон queue ID-тэй яг таарч, competition_type нь hub гэж ирсэн. Гэхдээ Club-ийн эзэмшлийг энэ шалгалт батлахгүй. NEXUS-д албан ёсны үр дүн хараахан хадгалаагүй.'
+                : 'FACEIT returned the exact selected queue ID as this match\'s competition_id and hub as the competition type. This verifies competition association, not the logged-in Club owner\'s identity. No NEXUS league results or ratings were written.')
+              : (mn
+                ? 'FACEIT competition_id болон төрөл нь сонгосон queue-ийнхтэй тохироогүй. Үр дүнг NEXUS-д оруулахгүй.'
+                : 'FACEIT did not return the exact selected queue competition ID and hub type. This match cannot be counted as belonging to your selected queue.')}</p>
           </div>
           {result.maps.length ? result.maps.map((map, i) => <div className="faceit-club-map" key={i}>
             <div className="faceit-club-map-heading">
