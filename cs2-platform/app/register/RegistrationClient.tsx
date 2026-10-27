@@ -14,6 +14,7 @@ export function RegistrationClient({profile,steamId,tournaments,registrations}:{
   locked:['Steam cannot be changed during an active tournament registration.','Тэмцээний бүртгэл идэвхтэй үед Steam хаягаа сольж болохгүй.'],
   duplicate:['That Steam account is already connected to a different NEXUS account.','Энэ Steam хаяг өөр NEXUS хаягтай холбогдсон байна.'],
   verification:['Steam did not confirm account ownership. Sign in to Steam and try again.','Steam хаягийн эзэмшлийг баталгаажуулж чадсангүй. Steam-д нэвтэрч дахин оролдоно уу.'],
+  credentials:['Supabase rejected the private server key. Open Supabase → Settings → API Keys and put the correct sb_secret_ key in cs2-platform/.env.local as SUPABASE_SECRET_KEY. Restart the dev server, then try again.','Supabase серверийн нууц түлхүүрийг зөвшөөрсөнгүй. Supabase → Settings → API Keys хэсгээс зөв sb_secret_ түлхүүрийг .env.local файлд оруулаад серверийг дахин асаана уу.'],
   setup:['Steam linking is not configured on the server yet. Add the private Supabase server key.','Steam холболтын серверийн тохиргоо дутуу байна.'],
   origin:['You started Steam linking from a different website address. Use the local or official preview URL.','Steam холболтыг өөр вэб хаягаас эхлүүлсэн байна. Зөв хаягаас дахин оролдоно уу.'],
   service:['Could not save your Steam link. Please try again later.','Steam хаягийг хадгалж чадсангүй. Дараа дахин оролдоно уу.']
