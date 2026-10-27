@@ -90,6 +90,54 @@ Create a server-side FACEIT Data API key at https://developers.faceit.com/ (see 
 
 **Payment confirmation occurs only after verified Stripe webhooks.** Returning to the success page never marks a player paid.
 
+## Admin FACEIT assessment and fair-play review (provisional v2)
+
+One server-side `FACEIT_API_KEY` belongs to **NEXUS**; players supply no API
+keys and never see the secret. To configure it, add it to `cs2-platform/.env.local`
+for local tests and to Vercel's **private server environment** when ready.
+Do not prefix it with `NEXT_PUBLIC_`.
+
+**Admin workflow**
+
+1. A player signs in with Discord, links their SteamID64, and joins a real
+   tournament. Stripe confirms a paid entry via its signed webhook.
+2. Open `/admin`, select an event, and use **SCAN NEXT 3** to analyze up to
+   three paid, unapproved players sequentially. The button can be used again
+   until the queue is exhausted. This operator-triggered process does not run
+   on every login or inside the payment webhook.
+3. NEXUS stores a FACEIT observation tied to the verified SteamID64 and
+   registration, and skips repeated scans within 24 hours for that identity.
+4. Review stored evidence using **REVIEW SAVED**, which does not consume
+   another FACEIT request. Approve final tiers manually. Flagged, downgraded,
+   or completely manual decisions require a documented reason (15+ characters).
+5. A paid player's approved 0–100 score is used by the existing five-player
+   team-balancing algorithm only after tournament registration is locked.
+
+**Fair-play safeguards**
+
+- FACEIT Elo is the primary signal. Recent K/D below 1.0 never decreases
+  the proposal. Strong recent K/D can raise the score by at most four points.
+- If the platform previously observed the *same verified Steam account*,
+  its highest recorded Elo from the last 180 days provides a protective
+  seeding baseline (previous peak minus 150 Elo, if higher than current Elo).
+  This is NEXUS-observed history, **not** FACEIT's all-time peak.
+- Large declines from the verified baseline, unusually high K/D relative
+  to a low Elo, and limited lifetime match history trigger **review flags**.
+  Flags are uncertain signals, **never proof of cheating or intentionally
+  losing**, and do not automatically punish or reject players.
+- New accounts with no historical observations cannot be reliably identified
+  as smurfs solely from a SteamID or one set of statistics. Manual review,
+  published competition rules, player appeals and match evidence remain
+  necessary. There is currently no automated deliberate-throw detection.
+- External FACEIT lookups require a configured key, provider availability
+  and remaining rate-limit capacity. The backend reports unavailable data
+  explicitly rather than fabricating a tier. Real-provider integration and
+  full tournament registration/payment flow still require staging tests.
+
+The separate `/admin/skill-lab` analyzes an admin's own verified Steam account
+for diagnostics **without** creating a paid entry, approving a tier, or saving
+a tournament rating snapshot.
+
 ## Deployment
 Deploy the `cs2-platform` subdirectory as a **Vercel project** (Root Directory = `cs2-platform`). Do not deploy this server app using GitHub Pages: GitHub Pages cannot execute server routes or safely store private API keys.
 
@@ -104,7 +152,7 @@ Set all environment variables in Vercel's server-side settings. Set `NEXT_PUBLIC
 - [ ] Configure email domain authentication, delivery and rate limiting.
 - [ ] Verify payment provider eligibility for your jurisdiction and prize format.
 - [ ] Add logging, monitoring, automated backups, secret rotation, and an incident response plan.
-- [ ] Run `npm run build`, `npm run lint`, `npm test`, and end-to-end tests on a staging deployment. **The build could not be run in this session because npm registry access is unavailable.**
+- [ ] Run `npm run build`, `npm run lint`, `npm test`, and end-to-end tests on a staging deployment. **Automated builds and unit checks are performed by CI; complete real-provider staging and user-journey tests before launch.**
 - [ ] Perform a security review before replacing `sk_test_` with a live key.
 - [ ] Remove the preview-only robots noindex setting once approved for publication.
 - [ ] Conduct manual end-to-end testing of the match scheduling and results admin flow with real team rosters.
@@ -114,7 +162,7 @@ Set all environment variables in Vercel's server-side settings. Set `NEXT_PUBLIC
 - Team publication requires a locked tournament, all scores approved, exactly 5 players per team and no active checkout holds.
 - Tournament capacity should be a **multiple of five** (50 or 60; not 64 for pure five-person teams).
 - The model is **provisional**; it does not currently adjust K/D for opponent strength, ingest Leetify or demo-level data, or establish reliable role impact. Never present its result as an objective AI decision.
-- An administrator can override suggestions and must document the reason.
+- Administrators can override provisional suggestions; flagged, downward and manual approvals require a meaningful written reason.
 - Team-generation algorithm randomizes candidates within similar skill bands and optimizes skill/role balance; the exact previewed roster is submitted for database publication. It can be extended to randomize between near-equivalent solutions after comprehensive testing.
 - `needs_refund` flags require immediate operator intervention. They are not automatically refunded by this version.
 - Do not paste credentials into ChatGPT or commit them to GitHub.
