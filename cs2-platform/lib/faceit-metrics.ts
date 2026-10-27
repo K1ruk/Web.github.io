@@ -110,7 +110,7 @@ export function recentFaceitMetrics(items: ReadonlyArray<{ stats?: Record<string
   for (const key of KEYS) {
     if (counts[key] > 0) average[key] = Math.round((totals[key]! / counts[key]) * 10000) / 10000;
   }
-  return { metrics: average, counts, matches: rows.length };
+  return { metrics: average, counts, matches: Math.max(0, ...Object.values(counts)) };
 }
 
 /** Lifetime response is an aggregate, NOT a sample of recent games. */
