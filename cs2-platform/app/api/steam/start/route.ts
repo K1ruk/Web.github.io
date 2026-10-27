@@ -32,7 +32,15 @@ export async function GET(request: NextRequest) {
   }
 
   const state = nonce();
+  const returnTo = new URL(request.url).searchParams.get('returnTo') === 'onboarding' ? 'onboarding' : 'register';
   const response = NextResponse.redirect(openIdRedirect(state, origin));
+  response.cookies.set('nexus_steam_after', returnTo, {
+    httpOnly: true,
+    secure: origin.startsWith('https://'),
+    sameSite: 'lax',
+    path: '/api/steam',
+    maxAge: 600,
+  });
   response.headers.set('Cache-Control', 'no-store');
   response.cookies.set('nexus_steam_state', state + '|' + user.id, {
     httpOnly: true,
