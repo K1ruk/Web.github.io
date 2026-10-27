@@ -100,8 +100,9 @@ async function saveResult(matchId:string,e:FormEvent<HTMLFormElement>){e.prevent
         recent_performance_mismatch: mn?'Сүүлийн үзүүлэлт Elo-оос өндөр':'Recent performance higher than Elo suggests',
         lifetime_performance_mismatch: mn?'Нийт үзүүлэлт Elo-оос өндөр':'Lifetime performance higher than Elo suggests',
         limited_faceit_history: mn?'Тоглолтын түүх бага':'Limited lifetime match history',
-        damage_elo_mismatch: mn?'Damage үзүүлэлт Elo-оос өндөр':'Recent damage high relative to FACEIT Elo',
-        utility_elo_mismatch: mn?'Utility үзүүлэлт Elo-оос өндөр':'Lifetime utility high relative to FACEIT Elo',
+        damage_elo_mismatch: mn?'ADR үзүүлэлт Elo-оос өндөр':'ADR unusually high relative to FACEIT Elo',
+        kast_elo_mismatch: mn?'KAST үзүүлэлт Elo-оос өндөр':'KAST unusually high relative to FACEIT Elo',
+        opening_elo_mismatch: mn?'Opening duel win % Elo-оос өндөр':'Opening duel win % unusually high relative to Elo',
       } as Record<string,string>)[flag] || flag}</span>)}</div>
     </div>}
   </div>}
