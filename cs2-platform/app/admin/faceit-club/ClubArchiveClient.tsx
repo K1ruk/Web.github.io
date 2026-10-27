@@ -3,6 +3,7 @@
 import { useRef,useState } from 'react';
 import type { QueueHistoryMatch } from '@/lib/faceit-hub-history';
 import { CLUB_ARCHIVE_SINCE_SECONDS } from '@/lib/club-archive';
+import { ClubPlayerDetails } from './ClubPlayerDetails';
 
 type PlayerSummary={
   faceitPlayerId:string;nickname:string;rating:number|null;
@@ -35,6 +36,7 @@ export function ClubArchiveClient({
   const [finished,setFinished]=useState(false);
   const [refreshing,setRefreshing]=useState(false);
   const [activeTab,setActiveTab]=useState<'leaderboard'|'recent'>('leaderboard');
+  const [selectedPlayer,setSelectedPlayer]=useState<{id:string;nickname:string}|null>(null);
   const filtered=matches.filter(match=>
     match.finishedAt!==null&&match.finishedAt>=CLUB_ARCHIVE_SINCE_SECONDS
     &&match.finishedAt<=Math.floor(Date.now()/1000)+3600);
@@ -163,7 +165,9 @@ export function ClubArchiveClient({
               ?overview.players
               :[...overview.players].sort((a,b)=>b.observedMaps-a.observedMaps)
             ).map(p=><tr key={p.faceitPlayerId}>
-              <td>{p.nickname}</td>
+              <td><button className="faceit-player-select" type="button"
+                onClick={()=>setSelectedPlayer({id:p.faceitPlayerId,nickname:p.nickname})}
+                title="View this player's actual saved FACEIT match stats">{p.nickname} ↗</button></td>
               <td>{nice(p.rating,2)}</td>
               <td>{p.ratedMaps} / {p.observedMaps}</td>
               <td>{nice(p.adr,1)}</td>
@@ -175,6 +179,9 @@ export function ClubArchiveClient({
           </tbody>
         </table>
       </div>
+      {selectedPlayer&&<ClubPlayerDetails key={selectedPlayer.id}
+        playerId={selectedPlayer.id} nickname={selectedPlayer.nickname}
+        onClose={()=>setSelectedPlayer(null)} locale={locale}/>} 
       <p className="faceit-breakdown-notice">{mn
         ? 'NEXUS Rating нь тухайн тоглолтын бусад тоглогчтой харьцуулсан түр performance үзүүлэлт. Энэ нь HLTV эсвэл FACEIT-ийн нууц томьёо БИШ, мөн Elo эсвэл тоглогчийн жинхэнэ ур чадварын tier-г орлохгүй.'
         : 'NEXUS Match Rating is an experimental, approximately 1.00-centered comparison of performance within the same CS2 lobby. It is NOT HLTV Rating, FACEIT Rating, round win probability, or your separate Elo-based tournament skill tier. Smaller samples are shrunk toward 1.00.'}</p>
