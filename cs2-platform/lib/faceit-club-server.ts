@@ -205,10 +205,36 @@ export async function inspectFaceitQueue() {
  * No tournament results, ratings or match records are written here.
  */
 export async function readSelectedQueueHubMatches(offset: number, limit: number) {
-  const response = await faceitGet<FaceitHubMatchesResponse>(
-    '/hubs/' + NEXUS_FACEIT_QUEUE_ID + '/matches?type=past'
-    + '&offset=' + offset + '&limit=' + limit,
-  );
+  let response: FaceitHubMatchesResponse | null;
+  try {
+    response = await faceitGet<FaceitHubMatchesResponse>(
+      '/hubs/' + NEXUS_FACEIT_QUEUE_ID + '/matches?type=past'
+      + '&offset=' + offset + '&limit=' + limit,
+    );
+  } catch (error) {
+    // FACEIT has sometimes rejected a later page with HTTP 400 even after
+    // returning all the matches the organizer expects. A rejected cursor
+    // is NOT evidence of end-of-history. Surface it separately so the admin
+    // can save only already-fetched, individually verified match IDs.
+    if (error instanceof FaceitRequestError
+      && error.code === 'bad_request' && offset > 0) {
+      return {
+        status: 'pagination_rejected' as const,
+        message: 'FACEIT returned HTTP 400 for Hub match-history page offset='
+          + offset + ', limit=' + limit
+          + '. Previous pages remain usable, but the end of the feed is not confirmed. '
+          + 'You can save fetched June matches with an incomplete-history warning.',
+        offset,
+        limit,
+        queueId: NEXUS_FACEIT_QUEUE_ID,
+        matches: [] as const,
+        hasMore: false as const,
+        nextOffset: null,
+        savedToDatabase: false as const,
+      };
+    }
+    throw error;
+  }
   if (!response) {
     return {
       status: 'not_exposed' as const,
