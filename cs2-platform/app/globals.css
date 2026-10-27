@@ -445,3 +445,10 @@
 .lab-review-alert{margin-top:20px;padding:19px 20px;border:1px solid #e49b6375;border-radius:11px;background:#e78c4217}
 .lab-review-alert strong{font-size:10px;letter-spacing:.11em;color:#f3b88d}
 .lab-review-alert p{font-size:12px;color:#e3bb9b;line-height:1.6;margin:11px 0 0}
+
+
+.admin-assessment-label{display:inline-block;border:1px solid #ffffff28;border-radius:6px;padding:6px 9px;font-size:9px;font-weight:730;letter-spacing:.09em;white-space:nowrap;color:#a7a09c;background:#ffffff06}
+.admin-assessment-label.suggested{color:#e8b48b;border-color:#e3a07155;background:#e37e3710}
+.admin-assessment-label.review{color:#f3a68d;border-color:#e17a5075;background:#e17a5019}
+.admin-assessment-label.approved{color:#afcbb5;border-color:#87b29665;background:#88b69710}
+.admin-assessment-tier{display:block;font:10px ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:9px;color:#a6a09a}
