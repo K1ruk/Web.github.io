@@ -1,37 +1,10 @@
 import 'server-only';
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import type { NextRequest } from 'next/server';
-import { siteUrl } from '@/lib/env';
-
 const STEAM_OPENID_URL = 'https://steamcommunity.com/openid/login';
 const OPENID_NAMESPACE = 'http://specs.openid.net/auth/2.0';
 
-/**
- * Steam must return to the *same origin* that initiated account linking.
- * Never follow an arbitrary Host header: only the configured origin, the
- * actual Vercel deployment hostname, or a loopback development origin is valid.
- */
-export function steamSiteOrigin(request: NextRequest): string {
-  const origin = request.nextUrl.origin;
-  if (origin === siteUrl()) return origin;
-
-  const current = new URL(origin);
-  const isDevelopmentLoopback =
-    process.env.NODE_ENV !== 'production' &&
-    current.protocol === 'http:' &&
-    (current.hostname === 'localhost' || current.hostname === '127.0.0.1');
-  if (isDevelopmentLoopback) return origin;
-
-  const deploymentHost = process.env.VERCEL_URL;
-  if (
-    process.env.VERCEL === '1' &&
-    deploymentHost &&
-    origin === 'https://' + deploymentHost
-  ) return origin;
-
-  throw new Error('Steam linking is not configured for this website address');
-}
+export { trustedSiteOrigin as steamSiteOrigin } from '@/lib/security';
 
 export function nonce() {
   return randomBytes(32).toString('hex');
