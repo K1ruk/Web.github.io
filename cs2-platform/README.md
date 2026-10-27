@@ -97,11 +97,21 @@ Create a server-side FACEIT Data API key at https://developers.faceit.com/ (see 
 matches are not displayed in the June list and cannot pass server-side
 date or database constraints. Data after June is included, not June alone.
 
-In `/admin/faceit-club`, click **SCAN AVAILABLE QUEUE HISTORY** until the
-documented Hub API reaches the last page. The scanner is capped at 100 pages
-and 10,000 provider records. Partial runs are not eligible for a complete
-June archive. **SAVE ALL JUNE+ MATCHES & PLAYER STATS** then imports the
-eligible entries in small batches (at most 3 matchrooms per server request).
+In `/admin/faceit-club`, click **SCAN AVAILABLE QUEUE HISTORY**.
+The scanner requests pages of **50** (the documented maximum is 100), and
+is capped at 200 pages / 10,000 provider records. A later-page HTTP 400
+is diagnosed as `pagination_rejected` with the specific offset/limit:
+it **does not** prove the queue is complete and does not discard previously
+fetched verified matches. NEXUS may then show **SAVE FETCHED JUNE+
+MATCHES (PARTIAL HISTORY)**. Only an explicitly attempted full scan can
+unlock that option; **TEST HUB HISTORY (FIRST 50)** cannot.
+Saving a partial selection does **not** mark the archive complete, and
+further June matches could remain undiscovered. Rerunning later will pick
+up any previously missed matches without duplicating already saved rows.
+
+After a truly completed scan, **SAVE ALL FETCHED JUNE+ MATCHES & PLAYER
+STATS** imports the eligible entries in small batches (at most 3
+matchrooms per server request).
 The user can stop between batches, reload the match history, and rerun it;
 existing matches with player statistics are safely skipped. FACEIT rate
 limits or connection failures leave already-committed batches intact.
@@ -199,7 +209,9 @@ every returned match for `competition_id` equal to the selected queue UUID,
 rejected. The UI exposes rejected counts, page count, and whether the known
 sample matchroom was located; the user can stop scanning and export a
 CSV of retrieved results. It stops at the end of FACEIT pagination or a
-100-page / 10,000-match safety cap. A 404 is reported as
+200-page / 10,000-match safety cap. A later-page HTTP 400 is **inconclusive**,
+not a verified end, and can be recovered via a clearly labeled partial
+June-only archive. A 404 is reported as
 **Hub endpoint not exposed** and does not imply an empty queue.
 
 The Hub scanner itself remains read-only. The **separate June 2026+ archive
