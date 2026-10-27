@@ -67,7 +67,7 @@ export type FaceitMatchInspection = {
   clubAssociationVerified: false;
 };
 
-type FaceitMatchDetail = {
+export type FaceitMatchDetail = {
   match_id?: unknown;
   game?: unknown;
   status?: unknown;
@@ -83,7 +83,7 @@ type FaceitMatchDetail = {
   results?: { score?: Record<string, unknown> };
 };
 
-type MatchStats = {
+export type FaceitMatchStats = {
   rounds?: Array<{
     round_stats?: Record<string, unknown>;
     teams?: Array<{
@@ -100,7 +100,7 @@ type MatchStats = {
 
 /** Whitelist an intentionally small match summary; never echo raw FACEIT JSON. */
 export function summarizeFaceitMatch(
-  id: string, details: FaceitMatchDetail, stats: MatchStats | null,
+  id: string, details: FaceitMatchDetail, stats: FaceitMatchStats | null,
 ): FaceitMatchInspection {
   if (details.game !== 'cs2') {
     throw new Error('This is not a FACEIT CS2 match.');
@@ -149,10 +149,11 @@ export function summarizeFaceitMatch(
     competitionId: label(details.competition_id),
     competitionType: label(details.competition_type, 45),
     organizerId: label(details.organizer_id),
-    finishedAt: positiveInt(details.finished_at) === null
-      ? (typeof details.finished_at === 'number' && Number.isSafeInteger(details.finished_at)
-        && details.finished_at > 0 ? details.finished_at : null)
-      : positiveInt(details.finished_at),
+    finishedAt: (() => {
+      const value = typeof details.finished_at === 'number'
+        || typeof details.finished_at === 'string' ? Number(details.finished_at) : NaN;
+      return Number.isSafeInteger(value) && value > 0 && value < 10000000000 ? value : null;
+    })(),
     teams,
     maps,
     hasPlayerStats: maps.some(map => map.teams.some(team => team.players.length > 0)),
