@@ -41,7 +41,7 @@ const SPECS: Record<MetricName, StatSpec> = {
 const KEYS = Object.keys(SPECS) as MetricName[];
 
 function keyOf(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return value.toLowerCase().replace(/%/g, 'percent').replace(/[^a-z0-9]/g, '');
 }
 
 function readField(fields: Record<string, unknown>, aliases: string[]): unknown {
