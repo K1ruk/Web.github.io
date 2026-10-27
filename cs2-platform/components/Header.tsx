@@ -7,12 +7,10 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useLocale } from './LocaleProvider';
 
 const links = [
-  ['/', 'HOME', 'НҮҮР'],
+  ['/', 'OVERVIEW', 'НҮҮР'],
   ['/players', 'PLAYERS', 'ТОГЛОГЧИД'],
   ['/teams', 'TEAMS', 'БАГУУД'],
   ['/schedule', 'SCHEDULE', 'ХУВААРЬ'],
-  ['/register', 'REGISTER', 'БҮРТГЭЛ'],
-  ['/dashboard', 'MY ACCOUNT', 'МИНИЙ ХАЯГ'],
 ] as const;
 
 type AuthState = 'loading' | 'signed-in' | 'signed-out';
@@ -21,6 +19,7 @@ export function Header() {
   const { locale, setLocale } = useLocale();
   const path = usePathname();
   const [authState, setAuthState] = useState<AuthState>('loading');
+  const mn = locale === 'mn';
 
   useEffect(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -32,65 +31,45 @@ export function Header() {
 
     const db = createBrowserClient(url, key);
     let mounted = true;
-
-    // Reflect OAuth login and other session updates without a full reload.
     const { data: { subscription } } = db.auth.onAuthStateChange((_event, session) => {
       if (mounted) setAuthState(session?.user ? 'signed-in' : 'signed-out');
     });
-
-    // Verify the current session on navigation, including after server-side sign out.
-    db.auth.getUser()
-      .then(({ data, error }) => {
-        if (mounted) setAuthState(!error && data.user ? 'signed-in' : 'signed-out');
-      })
-      .catch(() => {
-        if (mounted) setAuthState('signed-out');
-      });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    db.auth.getUser().then(({ data, error }) => {
+      if (mounted) setAuthState(!error && data.user ? 'signed-in' : 'signed-out');
+    }).catch(() => {
+      if (mounted) setAuthState('signed-out');
+    });
+    return () => { mounted = false; subscription.unsubscribe(); };
   }, [path]);
 
-  const mn = locale === 'mn';
-
   return (
-    <header className="site-header">
-      <Link className="logo" href="/" aria-label="Nexus home">
-        <span className="brand-symbol" aria-hidden="true">✳</span> NEXUS<span className="brand-period">.</span>
+    <header className="site-header nx-site-header">
+      <Link className="logo nx-site-brand" href="/" aria-label="Nexus tournament home">
+        <span className="nx-brand-monogram" aria-hidden="true">N<span>.</span></span>
+        <span className="nx-brand-wordmark">NEXUS<small>CS2 TOURNAMENTS</small></span>
       </Link>
-      <nav className="main-nav" aria-label={mn ? 'Үндсэн цэс' : 'Main menu'}>
-        {links.map(([href, en, mongolian]) => (
-          <Link
-            href={href}
-            key={href}
-            className={path === href ? 'nav-current' : ''}
-            aria-current={path === href ? 'page' : undefined}
-          >
-            {mn ? mongolian : en}
-          </Link>
-        ))}
+      <nav className="main-nav nx-site-nav" aria-label={mn ? 'Үндсэн цэс' : 'Main navigation'}>
+        {links.map(([href, en, mongolian]) => {
+          const current = href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
+          return <Link key={href} href={href} className={current ? 'nav-current' : ''}
+            aria-current={current ? 'page' : undefined}>{mn ? mongolian : en}</Link>;
+        })}
       </nav>
-      <div className="header-end">
+      <div className="header-end nx-site-actions">
         <div className="locale-switch" aria-label="Language">
-          <button className={mn ? '' : 'selected'} onClick={() => setLocale('en')} aria-pressed={!mn}>EN</button>
+          <button type="button" className={mn ? '' : 'selected'} onClick={() => setLocale('en')} aria-pressed={!mn}>EN</button>
           <span>/</span>
-          <button className={mn ? 'selected' : ''} onClick={() => setLocale('mn')} aria-pressed={mn}>МН</button>
+          <button type="button" className={mn ? 'selected' : ''} onClick={() => setLocale('mn')} aria-pressed={mn}>МН</button>
         </div>
-        {authState === 'loading' ? (
-          <span className="header-auth-placeholder" aria-label={mn ? 'Нэвтрэлтийг шалгаж байна' : 'Checking account'} />
-        ) : (
-          <Link
-            href={authState === 'signed-in' ? '/dashboard' : '/login'}
-            className={'outline-button small header-auth-link' + (authState === 'signed-in' ? ' header-auth-active' : '')}
-          >
-            {authState === 'signed-in' && <span className="header-status-dot" aria-hidden="true" />}
-            {authState === 'signed-in'
-              ? (mn ? 'МИНИЙ ХАЯГ' : 'MY ACCOUNT')
-              : (mn ? 'НЭВТРЭХ' : 'SIGN IN')}
-          </Link>
-        )}
+        {authState === 'signed-out' && <Link className="nx-site-signin" href="/login">{mn ? 'НЭВТРЭХ' : 'SIGN IN'}</Link>}
+        {authState === 'loading'
+          ? <span className="header-auth-placeholder" aria-label={mn ? 'Нэвтрэлтийг шалгаж байна' : 'Checking account'} />
+          : <Link className={'outline-button small nx-site-primary' + (authState === 'signed-in' ? ' header-auth-active' : '')}
+              href={authState === 'signed-in' ? '/dashboard' : '/register'}>
+              {authState === 'signed-in' && <span className="header-status-dot" aria-hidden="true" />}
+              {authState === 'signed-in' ? (mn ? 'МИНИЙ ПРОФАЙЛ' : 'MY DASHBOARD') : (mn ? 'БҮРТГҮҮЛЭХ' : 'JOIN EVENT')}
+              <span aria-hidden="true">↗</span>
+            </Link>}
       </div>
     </header>
   );
