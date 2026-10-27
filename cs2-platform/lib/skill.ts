@@ -1,9 +1,10 @@
 import type { FaceitMetrics, MetricName } from './faceit-metrics';
 
 /**
- * Provisional and deliberately conservative CS2 seeding model.
- * There is no calibrated claim here that our heuristics reflect objective
- * individual skill. Elo remains the dominant tournament balancing signal.
+ * NEXUS provisional seeding v4: exact FACEIT Elo + the four signals the
+ * tournament operator selected (ADR, KAST, opening-duel win %, K/D).
+ * These uncalibrated thresholds are bounded and explainable, not a claim
+ * of independently validated competitive skill.
  */
 export type SkillReviewFlag =
   | 'historical_elo_drop'
@@ -11,7 +12,8 @@ export type SkillReviewFlag =
   | 'lifetime_performance_mismatch'
   | 'limited_faceit_history'
   | 'damage_elo_mismatch'
-  | 'utility_elo_mismatch';
+  | 'kast_elo_mismatch'
+  | 'opening_elo_mismatch';
 
 export type SkillContext = {
   historicalPeakElo?: number | null;
@@ -19,53 +21,44 @@ export type SkillContext = {
   lifetimeKd?: number | null;
   recentMetrics?: Partial<FaceitMetrics> | null;
   lifetimeMetrics?: Partial<FaceitMetrics> | null;
-  /** Per-field number of recent matches exposing this stat. */
   recentMetricSamples?: Partial<Record<MetricName, number>> | null;
 };
 
-export type SkillArea = 'impact' | 'teamplay' | 'opening' | 'clutch';
-type Group = Record<SkillArea, number>;
-const ZERO: Group = { impact: 0, teamplay: 0, opening: 0, clutch: 0 };
+export type SkillArea = 'adr' | 'kast' | 'opening' | 'kd';
+export type SkillBonuses = Record<SkillArea, number>;
 
-function points(value: number | null | undefined, baseline: number, high: number, max: number) {
-  if (value == null || !Number.isFinite(value) || value < baseline) return 0;
-  return Math.max(0, Math.min(max, (value - baseline) / (high - baseline) * max));
+export const SKILL_BONUS_CAPS: SkillBonuses = {
+  adr: 2.5,
+  kast: 2,
+  opening: 1.5,
+  kd: 1.5,
+};
+const ZERO: SkillBonuses = { adr: 0, kast: 0, opening: 0, kd: 0 };
+const round = (value: number) => Math.round(value * 100) / 100;
+
+function points(value: unknown, low: number, high: number, cap: number) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= low) return 0;
+  return Math.max(0, Math.min(cap, (value - low) / (high - low) * cap));
 }
 
-/**
- * Group similar correlated metrics. Only positive, bounded evidence can add
- * points: an individual having poor stats NEVER loses points below Elo base.
- * We deliberately do NOT score HS%, sniper usage, raw win rate or MVPs:
- * those can strongly reflect role, weapons, teammates or opponent strength.
- */
-function areaBonuses(metrics: Partial<FaceitMetrics>, recentSamples?: SkillContext['recentMetricSamples']) {
-  const get = (key: MetricName): number | null => {
-    if (recentSamples && (recentSamples[key] ?? 0) < 10) return null;
-    const value = metrics[key];
-    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+function bonuses(
+  metrics: Partial<FaceitMetrics>,
+  samples: SkillContext['recentMetricSamples'] = null,
+): SkillBonuses {
+  const get = (key: MetricName) => {
+    if (samples && (samples[key] ?? 0) < 10) return null;
+    return metrics[key] ?? null;
   };
-  const contributions: Group = {
-    impact: Math.min(3,
-      points(get('adr'), 78, 105, 2.25)
-      + points(get('killsPerRound'), 0.68, 1.0, 1.3)
-      + points(get('kd'), 1.0, 1.55, 0.8)),
-    teamplay: Math.min(2.4,
-      points(get('assistsPerMatch'), 4.5, 8, 1.1)
-      + points(get('utilityDamagePerRound'), 4, 12, 1.0)
-      + points(get('enemiesFlashedPerRound'), 0.25, 0.6, 1.2)),
-    opening: Math.min(1.2,
-      points(get('entrySuccessRate'), 0.5, 0.75, 1.1)
-      + points(get('entryRate'), 0.11, 0.25, 0.4)),
-    clutch: Math.min(0.9,
-      points(get('clutch1v1Rate'), 0.42, 0.68, 0.7)
-      + points(get('clutch1v2Rate'), 0.2, 0.43, 0.35)),
+  return {
+    adr: points(get('adr'), 75, 110, SKILL_BONUS_CAPS.adr),
+    kast: points(get('kastPercent'), 68, 83, SKILL_BONUS_CAPS.kast),
+    opening: points(get('openingDuelWinPercent'), 48, 68, SKILL_BONUS_CAPS.opening),
+    kd: points(get('kd'), 1.0, 1.55, SKILL_BONUS_CAPS.kd),
   };
-  return contributions;
 }
 
-function round(value: number) { return Math.round(value * 100) / 100; }
-function total(areas: Group) {
-  return Math.min(7.5, areas.impact + areas.teamplay + areas.opening + areas.clutch);
+function total(values: SkillBonuses) {
+  return values.adr + values.kast + values.opening + values.kd;
 }
 
 export function tierFromScore(score: number): number {
@@ -85,14 +78,17 @@ export function provisionalSkill(
   const history = context.historicalPeakElo;
   const historicalPeakElo = history != null && Number.isFinite(history) && history >= 0 && history <= 10000
     ? history : null;
+
   const rawLifetimeMatches = context.lifetimeMatches;
   const lifetimeMatches = rawLifetimeMatches != null && Number.isSafeInteger(rawLifetimeMatches)
     && rawLifetimeMatches >= 0 ? rawLifetimeMatches : null;
+
   const rawLifetimeKd = context.lifetimeKd;
   const lifetimeKd = rawLifetimeKd != null && Number.isFinite(rawLifetimeKd)
-    && rawLifetimeKd >= 0 && rawLifetimeKd < 15 ? rawLifetimeKd : null;
+    && rawLifetimeKd >= 0 && rawLifetimeKd <= 15 ? rawLifetimeKd : null;
 
-  // Use only Elo observations NEXUS genuinely made for this SteamID.
+  // NEXUS historical protection uses only Elo previously observed from this
+  // SAME verified SteamID64, never a fabricated all-time FACEIT peak.
   const protectedElo = Math.max(elo, (historicalPeakElo ?? elo) - 150);
   const base = 100 / (1 + Math.exp(-(protectedElo - 1850) / 650));
 
@@ -105,51 +101,54 @@ export function provisionalSkill(
     kd: lifetimeKd ?? context.lifetimeMetrics?.kd ?? null,
   };
 
-  const recentAreas = matches >= 10
-    ? areaBonuses(recent, context.recentMetricSamples) : { ...ZERO };
-  const lifetimeAreas = lifetimeMatches != null && lifetimeMatches >= 60
-    ? areaBonuses(lifetime) : { ...ZERO };
-
-  // Do not add the same stat twice across recent and lifetime samples.
-  // A temporary bad streak does not erase previously observed positive
-  // lifetime evidence, while new high performance can still be considered.
-  const useLifetime = total(lifetimeAreas) > total(recentAreas);
-  const performanceAreas = useLifetime ? lifetimeAreas : recentAreas;
-  const performanceSource = total(performanceAreas) === 0
-    ? 'elo-only' as const : useLifetime ? 'lifetime' as const : 'recent' as const;
-  const performanceBonus = round(total(performanceAreas));
+  // A short losing streak cannot erase previously verified good performance.
+  // We do not add recent and lifetime evidence together (double counting).
+  const recentBonuses = matches >= 10 ? bonuses(recent, context.recentMetricSamples) : { ...ZERO };
+  const lifetimeBonuses = lifetimeMatches != null && lifetimeMatches >= 60
+    ? bonuses(lifetime) : { ...ZERO };
+  const useLifetime = total(lifetimeBonuses) > total(recentBonuses);
+  const best = useLifetime ? lifetimeBonuses : recentBonuses;
+  const performanceBonus = round(Math.min(7.5, total(best)));
   const score = Math.max(0, Math.min(100, round(base + performanceBonus)));
+  const performanceSource = performanceBonus === 0
+    ? 'elo-only' as const : useLifetime ? 'lifetime' as const : 'recent' as const;
+
+  const hasRecent = (key: MetricName, sample = 15) =>
+    (context.recentMetricSamples?.[key] ?? matches) >= sample;
+  const recentCast = (key: MetricName) => recent[key];
 
   const reviewFlags: SkillReviewFlag[] = [];
   if (historicalPeakElo !== null && historicalPeakElo - elo >= 250)
     reviewFlags.push('historical_elo_drop');
-  if (recentKd !== null && matches >= 15 && recentKd >= 1.5 && elo < 1750)
+  if (recentKd !== null && hasRecent('kd') && recentKd >= 1.5 && elo < 1750)
     reviewFlags.push('recent_performance_mismatch');
   if (lifetimeKd !== null && lifetimeMatches !== null
     && lifetimeMatches >= 80 && lifetimeKd >= 1.45 && elo < 1750)
     reviewFlags.push('lifetime_performance_mismatch');
   if (lifetimeMatches !== null && lifetimeMatches < 30)
     reviewFlags.push('limited_faceit_history');
-
-  const recentAdr = recent.adr;
-  if (recentAdr !== null && recentAdr !== undefined
-    && (context.recentMetricSamples?.adr ?? matches) >= 15
-    && recentAdr >= 96 && elo < 1750)
+  if (hasRecent('adr') && (recentCast('adr') ?? -1) >= 96 && elo < 1750)
     reviewFlags.push('damage_elo_mismatch');
+  if (hasRecent('kastPercent') && (recentCast('kastPercent') ?? -1) >= 79 && elo < 1750)
+    reviewFlags.push('kast_elo_mismatch');
+  if (hasRecent('openingDuelWinPercent')
+    && (recentCast('openingDuelWinPercent') ?? -1) >= 65 && elo < 1750)
+    reviewFlags.push('opening_elo_mismatch');
 
-  const lifetimeFlashes = lifetime.enemiesFlashedPerRound;
-  const lifetimeUtility = lifetime.utilityDamagePerRound;
-  if (lifetimeMatches !== null && lifetimeMatches >= 80 && elo < 1750
-    && ((lifetimeFlashes != null && lifetimeFlashes >= 0.65)
-      || (lifetimeUtility != null && lifetimeUtility >= 12)))
-    reviewFlags.push('utility_elo_mismatch');
+  const availableRecent = (Object.keys(SKILL_BONUS_CAPS) as SkillArea[])
+    .filter(area => hasRecent((area === 'kast' ? 'kastPercent'
+      : area === 'opening' ? 'openingDuelWinPercent' : area)))
+    .length;
+  // Count meaningful samples, not just a returned HTTP 200. A single K/D
+  // reading is insufficient evidence that advanced metrics exist.
+  const confidence = matches >= 20 && availableRecent >= 3 ? 'recent-data' as const
+    : matches >= 10 && availableRecent >= 1 ? 'limited' as const : 'elo-only' as const;
 
   return {
     score,
     tier: tierFromScore(score),
-    confidence: matches >= 20 ? 'recent-data' as const
-      : matches >= 10 ? 'limited' as const : 'elo-only' as const,
-    model: 'multi-signal-v3' as const,
+    confidence,
+    model: 'core-four-v4' as const,
     elo,
     protectedElo: Math.round(protectedElo),
     historicalPeakElo,
@@ -159,10 +158,10 @@ export function provisionalSkill(
     lifetimeKd,
     performanceBonus,
     performanceAreas: {
-      impact: round(performanceAreas.impact),
-      teamplay: round(performanceAreas.teamplay),
-      opening: round(performanceAreas.opening),
-      clutch: round(performanceAreas.clutch),
+      adr: round(best.adr),
+      kast: round(best.kast),
+      opening: round(best.opening),
+      kd: round(best.kd),
     },
     performanceSource,
     reviewFlags,
