@@ -33,6 +33,7 @@ const steamErrors: Record<string, [string, string]> = {
 };
 
 function eventStatus(status: string, availability: string, mn: boolean) {
+  if (status === 'demo') return mn ? 'ЗАГВАР / ДЕМО' : 'DEMO PREVIEW';
   if (status === 'published') return mn ? 'БАГУУД ГАРСАН' : 'TEAMS RELEASED';
   if (status === 'finished') return mn ? 'ДУУССАН' : 'COMPLETED';
   if (availability === 'full') return mn ? 'ДҮҮРСЭН' : 'FULL';
@@ -75,13 +76,14 @@ export function RegistrationClient({
   const alreadyPaid = confirmedEntry(registration);
   const pending = activePayment(registration, now);
   const rulesReady = !!rulesUrl && !!refundUrl;
-  const entryReady = !!event && availability === 'open' && playerReady && steamReady
+  const entryReady = !!event && !event.demo && availability === 'open' && playerReady && steamReady
     && rulesReady && paymentsEnabled && !alreadyPaid;
   const canCheckout = entryReady && accepted && !busy;
   const paidRegistrations = registrations.filter(reg => reg.status === 'paid').length;
 
   let blocker: string | null = null;
   if (!event) blocker = mn ? 'Одоогоор нээлттэй тэмцээн байхгүй.' : 'No tournaments have been announced yet.';
+  else if (event.demo) blocker = mn ? 'Энэ нь зөвхөн загвар. Бодит бүртгэл, төлбөр авахгүй.' : 'Preview only — no registration or payment will be taken.';
   else if (alreadyPaid) blocker = mn ? 'Та энэ тэмцээнд бүртгүүлсэн.' : 'You already have a confirmed place in this event.';
   else if (availability === 'full') blocker = mn ? 'Энэ тэмцээний суудал дүүрсэн.' : 'All confirmed places are taken.';
   else if (availability !== 'open') blocker = mn ? 'Энэ тэмцээний бүртгэл хаагдсан.' : 'Registration is not open for this event.';
@@ -184,7 +186,7 @@ export function RegistrationClient({
                     type="button" aria-pressed={chosen}
                     onClick={() => { setSelected(item.id); setAccepted(false); setErrorMessage(''); }}>
                     <span className="entry-event-card-top">
-                      <span className="entry-event-tag">{item.slug.toUpperCase()}</span>
+                      <span className="entry-event-tag">{item.demo ? 'NX / CONCEPT · BVG' : item.slug.toUpperCase()}</span>
                       <span className={'entry-event-status' + (state === 'open' ? ' open' : '')}>
                         <span aria-hidden="true" className="entry-status-dot"/>
                         {eventStatus(item.status, state, mn)}
@@ -195,8 +197,8 @@ export function RegistrationClient({
                       ? (mn ? 'ЭХЛЭХ · ' : 'STARTS · ') + readableDate(item.starts_at, locale)
                       : (mn ? 'ЭХЛЭХ ӨДӨР ТОВЛООГҮЙ' : 'DATE TO BE ANNOUNCED')}</span>
                     <span className="entry-event-card-bottom">
-                      <span><small>{mn ? 'ОРОЛЦОХ ХУРААМЖ' : 'ENTRY FEE'}</small><b>{displayFee(item.fee_cents, item.currency, locale)}</b></span>
-                      <span><small>{mn ? 'БАТАЛГААЖСАН ТОГЛОГЧ' : 'CONFIRMED PLAYERS'}</small><b>{item.confirmed} <em>/ {item.capacity}</em></b></span>
+                      <span><small>{mn ? 'ОРОЛЦОХ ХУРААМЖ' : 'ENTRY FEE'}</small><b>{item.demo ? (mn ? 'ТОВЛООГҮЙ' : 'TBA') : displayFee(item.fee_cents, item.currency, locale)}</b></span>
+                      <span><small>{mn ? 'БАТАЛГААЖСАН ТОГЛОГЧ' : 'CONFIRMED PLAYERS'}</small><b>{item.demo ? '10 ' : item.confirmed} <em>{item.demo ? (mn ? 'БАГ · 50 БАЙР' : 'TEAMS · 50 SLOTS') : '/ ' + item.capacity}</em></b></span>
                       <span className="entry-card-select" aria-hidden="true">{chosen ? '✓' : '↗'}</span>
                     </span>
                     {confirmedEntry(eventRegistration) && <span className="entry-event-registered">{mn ? 'ТА БҮРТГҮҮЛСЭН' : 'YOUR ENTRY IS CONFIRMED'}</span>}
@@ -208,6 +210,7 @@ export function RegistrationClient({
         </section>
 
         <aside className="entry-review" aria-labelledby="entry-review-title">
+          {event?.demo && <div className="entry-notice" role="note">{mn ? 'BVG – Friends League: 10 баг / 50 тоглогчийн демо тэмцээн. Бодит бүртгэл хараахан эхлээгүй.' : 'BVG – Friends League: preview tournament for 10 squads / 50 players. Registration is not live.'}</div>}
           <div className="entry-review-heading">
             <div><span className="section-kicker">02 / {mn ? 'МИНИЙ БҮРТГЭЛ' : 'YOUR ENTRY'}</span><h2 id="entry-review-title">{mn ? 'Бүртгэлийн мэдээлэл' : 'Review your entry'}</h2></div>
             <span className="entry-review-mark">NX</span>
@@ -245,7 +248,7 @@ export function RegistrationClient({
             </div>}
             <div className="entry-summary-total">
               <span>{mn ? 'НИЙТ' : 'ENTRY TOTAL'}</span>
-              <strong>{event ? displayFee(event.fee_cents, event.currency, locale) : '—'}</strong>
+              <strong>{event ? (event.demo ? (mn ? 'ТОВЛООГҮЙ' : 'TBA') : displayFee(event.fee_cents, event.currency, locale)) : '—'}</strong>
             </div>
             <p className="entry-summary-payment">{mn ? 'Stripe-ийн аюулгүй хуудсаар төлбөр төлнө. Төлбөр баталгаажсаны дараа таны оролцоо бүртгэгдэнэ.' : 'Payment is processed securely by Stripe. A place is only confirmed once payment is verified.'}</p>
           </div>
@@ -260,7 +263,7 @@ export function RegistrationClient({
           </label>}
 
           <button className="entry-checkout" type="button" disabled={!canCheckout} onClick={checkout}>
-            <span>{busy ? (mn ? 'ТҮР ХҮЛЭЭНЭ ҮҮ' : 'OPENING CHECKOUT...')
+            <span>{event?.demo ? (mn ? 'ЗАГВАР ҮЗЭХ ГОРИМ' : 'PREVIEW ONLY') : busy ? (mn ? 'ТҮР ХҮЛЭЭНЭ ҮҮ' : 'OPENING CHECKOUT...')
               : alreadyPaid ? (mn ? 'БҮРТГЭЛ БАТАЛГААЖСАН' : 'ENTRY CONFIRMED')
                 : pending ? (mn ? 'ТӨЛБӨР ҮРГЭЛЖЛҮҮЛЭХ' : 'RESUME CHECKOUT')
                   : (mn ? 'ТӨЛБӨР ТӨЛӨХ' : 'CONTINUE TO CHECKOUT')}</span>
