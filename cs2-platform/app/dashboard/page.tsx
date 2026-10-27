@@ -4,6 +4,7 @@ import { requireUser } from '@/lib/auth';
 import { adminDb } from '@/lib/supabase/admin';
 import { DashboardClient } from './DashboardClient';
 import { discordAvatarFromMetadata, steamAvatarFromId } from '@/lib/profile-avatars';
+import type { PlayerTournamentSnapshot, PlayerFixture, PlayerTeammate } from '@/components/PlayerTournamentStatus';
 
 export const dynamic = 'force-dynamic';
 
@@ -148,6 +149,102 @@ export default async function Dashboard() {
   const discordAvatarUrl = discordConnected ? discordAvatarFromMetadata(user.user_metadata || {}) : null;
   const steamAvatarUrl = await steamAvatarFromId(steamResult.data?.steam_id || null);
 
+  // Real players can see only their own registration before rosters publish.
+  // Teammate names/roles and fixtures are fetched ONLY for published events
+  // and only for teams the authenticated player has actually joined.
+  const publishedTeams = (teamsResult.data || []).filter(team =>
+    visibleTournamentIds.has(team.tournament_id) && teamIds.includes(team.id));
+  const permittedTeamIds = publishedTeams.map(team => team.id);
+  const teammateMembershipsResult = permittedTeamIds.length
+    ? await db.from('team_members')
+      .select('team_id,registration_id,assigned_role')
+      .in('team_id', permittedTeamIds).limit(1001)
+    : { data: [], error: null };
+  const teammateMembers=teammateMembershipsResult.data || [];
+  const teammateRegistrationIds=[...new Set(teammateMembers.map(member=>member.registration_id))];
+  const publicRosterRegResult = teammateRegistrationIds.length
+    ? await db.from('registrations').select('id,user_id,assigned_tier,status')
+      .in('id',teammateRegistrationIds).limit(1001)
+    : { data: [], error: null };
+  const publicRosterUserIds=[...new Set((publicRosterRegResult.data||[])
+    .filter(r=>r.status==='paid').map(r=>r.user_id))];
+  const rosterProfileResult=publicRosterUserIds.length
+    ? await db.from('profiles').select('user_id,nickname')
+      .in('user_id',publicRosterUserIds).limit(1001)
+    : { data: [], error: null };
+  const fixtureResult=permittedTeamIds.length
+    ? await db.from('matches')
+      .select('id,team_a,team_b,scheduled_at,stage,status,best_of,score_a,score_b,tournament_id')
+      .in('tournament_id',[...visibleTournamentIds])
+      .or(`team_a.in.(${permittedTeamIds.join(',')}),team_b.in.(${permittedTeamIds.join(',')})`)
+      .order('scheduled_at',{ascending:true}).limit(301)
+    : { data: [], error: null };
+
+  if(teammateMembershipsResult.error||publicRosterRegResult.error||rosterProfileResult.error
+    ||fixtureResult.error||teammateMembers.length>1000
+    ||(publicRosterRegResult.data?.length??0)>1000
+    ||(rosterProfileResult.data?.length??0)>1000
+    ||(fixtureResult.data?.length??0)>300) {
+    return <main className="content-page">
+      <h1 className="page-heading">TOURNAMENT DETAILS UNAVAILABLE</h1>
+      <p className="lead">Your account is secure, but the published team information could not be verified. Please try again later.</p>
+      <Link className="outline-button margin-top" href="/dashboard">RETRY</Link>
+    </main>;
+  }
+
+  const teamDetailsById=new Map(publishedTeams.map(team=>[team.id,team]));
+  const teammateRegistrationById=new Map((publicRosterRegResult.data||[])
+    .filter(r=>r.status==='paid').map(r=>[r.id,r]));
+  const nicknameByUserId=new Map((rosterProfileResult.data||[])
+    .map(profile=>[profile.user_id,profile.nickname]));
+
+  const tournamentSnapshots:PlayerTournamentSnapshot[]=registrations.map(entry=>{
+    const evt=events.find(e=>e.id===entry.tournament_id);
+    const membership=members.find(m=>m.registration_id===entry.id);
+    const team=membership?teamDetailsById.get(membership.team_id):null;
+    const revealed=!!team && !!evt && ['published','finished'].includes(evt.status)
+      && entry.status==='paid';
+    const teammates:PlayerTeammate[]=revealed
+      ?teammateMembers.filter(m=>m.team_id===team.id).map(m=>{
+        const linked=teammateRegistrationById.get(m.registration_id);
+        return {
+          nickname:linked?nicknameByUserId.get(linked.user_id)||'Player':'Player',
+          role:m.assigned_role,
+          tier:linked?.assigned_tier??null,
+          isYou:m.registration_id===entry.id,
+        };
+      }):[];
+
+    const fixtures:PlayerFixture[]=revealed
+      ?(fixtureResult.data||[]).filter(m=>m.tournament_id===entry.tournament_id
+        &&(m.team_a===team.id||m.team_b===team.id)).slice(0,10).map(m=>{
+          const onA=m.team_a===team.id;
+          const opponentId=onA?m.team_b:m.team_a;
+          const teamAName=onA?team.name:teamDetailsById.get(m.team_a||'')?.name||'Opponent';
+          const teamBName=onA?teamDetailsById.get(m.team_b||'')?.name||'Opponent':team.name;
+          const opponentName=teamDetailsById.get(opponentId||'')?.name||'To be announced';
+          return {
+            id:m.id,opponentName,stage:m.stage,
+            scheduledAt:m.scheduled_at,bestOf:m.best_of,
+            status:m.status,
+            score:m.status==='completed'&&m.score_a!==null&&m.score_b!==null
+              ?teamAName+' '+m.score_a+' – '+m.score_b+' '+teamBName:null,
+          };
+        }):[];
+
+    return {
+      id:entry.id,eventName:evt?.name||'Tournament',
+      eventStatus:evt?.status||'draft',
+      registrationStatus:entry.status,
+      tier:entry.assigned_tier,
+      teamName:revealed?team.name:null,
+      assignedRole:revealed
+        ?teammateMembers.find(m=>m.team_id===team.id&&m.registration_id===entry.id)?.assigned_role??null
+        :null,
+      teammates,fixtures,
+    };
+  });
+
   return (
     <DashboardClient
       email={user.email || ''}
@@ -164,6 +261,7 @@ export default async function Dashboard() {
         played: officialMatches.length,
         events: confirmedRegistrations.length,
       }}
+      tournamentSnapshots={tournamentSnapshots}
       registrations={registrations.map(entry => ({
         ...entry,
         tournamentName: events.find(event => event.id === entry.tournament_id)?.name || 'Event',
