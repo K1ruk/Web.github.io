@@ -27,6 +27,17 @@ type HistoryPage =
       hasMore: false;
       nextOffset: null;
       savedToDatabase: false;
+    }
+  | {
+      status: 'pagination_rejected';
+      message: string;
+      queueId: string;
+      offset: number;
+      limit: number;
+      matches: [];
+      hasMore: false;
+      nextOffset: null;
+      savedToDatabase: false;
     };
 
 type ScanState = 'idle' | 'checking' | 'scanning' | 'complete' | 'unavailable' | 'stopped' | 'partial' | 'error';
@@ -55,6 +66,7 @@ export function QueueHistoryClient({
   const [message, setMessage] = useState('');
   const [more, setMore] = useState(false);
   const [visible, setVisible] = useState(50);
+  const [attemptedFullScan, setAttemptedFullScan] = useState(false);
 
   const busy = status === 'checking' || status === 'scanning';
   const juneMatches = matches.filter(m=>m.finishedAt!==null
@@ -77,6 +89,7 @@ export function QueueHistoryClient({
 
   async function testHistory() {
     if (!apiConfigured || busy) return;
+    setAttemptedFullScan(false);
     setStatus('checking');
     setMessage('');
     setMatches([]);
@@ -87,7 +100,7 @@ export function QueueHistoryClient({
     setVisible(50);
     try {
       const page = await getPage(0, 50);
-      if (page.status === 'not_exposed') {
+      if (page.status === 'not_exposed' || page.status === 'pagination_rejected') {
         setStatus('unavailable');
         setMessage(page.message);
         return;
@@ -112,6 +125,7 @@ export function QueueHistoryClient({
 
   async function scanHistory() {
     if (!apiConfigured || busy) return;
+    setAttemptedFullScan(true);
     cancelRef.current = false;
     setStatus('scanning');
     setMatches([]);
@@ -135,6 +149,13 @@ export function QueueHistoryClient({
         if (page.status === 'not_exposed') {
           setStatus('unavailable');
           setMessage(page.message);
+          return;
+        }
+        if (page.status === 'pagination_rejected') {
+          setStatus('partial');
+          setMore(true);
+          setMessage(page.message + ' ' + accumulated.length
+            + ' verified match records were preserved; this is not a confirmed full history.');
           return;
         }
         if (page.queueId !== queueId) throw new Error('FACEIT returned another competition. Scan rejected.');
@@ -233,8 +254,8 @@ export function QueueHistoryClient({
     </div>
     <p className="faceit-club-note">
       {mn
-        ? 'Энэ нь зөвхөн админы хэсэгт ажиллана. Одоогоор өгөгдлийг браузерт түр харуулж CSV болгож татна; өгөгдлийн санд автоматаар хадгалах эсвэл цагийн хуваариар шинэчлэх ажил хараахан идэвхгүй.'
-        : 'This is an admin-triggered read-only scan. Results stay in the browser until refresh or CSV export. Automatic scheduled syncing and database storage are not enabled yet.'}
+        ? 'Энд байгаа скан нь зөвхөн уншина. Доорх Save хэсэгт зөвхөн 2026 оны 6-р сарын 1-нээс хойших FACEIT-аар баталгаажсан тоглолтуудыг Supabase-д хадгалж болно.'
+        : 'The history scan itself is read-only. The Save section below can separately archive verified matches dated June 1, 2026 onward. Background synchronization is not enabled.'}
     </p>
     {status !== 'idle' && <div className="faceit-history-status" aria-live="polite">
       <div><small>VALID MATCHES</small><strong>{matches.length.toLocaleString()}</strong></div>
@@ -279,6 +300,7 @@ export function QueueHistoryClient({
     <ClubArchiveClient
       matches={juneMatches}
       historyComplete={status==='complete' && !more}
+      allowPartialSave={attemptedFullScan && !busy && (status==='partial' || status==='error' || status==='stopped')}
       locale={locale}
       apiConfigured={apiConfigured}
     />
