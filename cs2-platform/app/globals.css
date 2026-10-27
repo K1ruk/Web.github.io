@@ -548,3 +548,17 @@
 .faceit-club-no-stats p{line-height:1.7}
 @media(max-width:970px){.faceit-club-layout{grid-template-columns:1fr}.faceit-club-aside{display:grid;grid-template-columns:1.2fr .8fr}}
 @media(max-width:680px){.faceit-club-page{padding-top:30px;padding-bottom:75px}.faceit-club-aside{display:flex}.faceit-club-meta{grid-template-columns:1fr}.faceit-club-meta>span{padding:10px}.faceit-club-page .lab-card{padding:20px}.faceit-club-reference .faceit-club-id{font-size:12px}}
+
+
+/* FACEIT organizer-only selected-queue permission diagnostics */
+.faceit-club-queue{background:radial-gradient(ellipse at 95% 0%,#d18d4220,transparent 68%),linear-gradient(130deg,#171615,#0c0b0c)}
+.faceit-club-queue .faceit-club-id{display:block;font-size:clamp(12px,1.5vw,18px);margin:0}
+.faceit-club-queue .faceit-club-go{margin-bottom:10px}
+.faceit-queue-probe{margin-top:22px;width:100%;min-height:47px}
+.faceit-club-queue-result{margin-top:25px;border-top:1px solid #ffffff22;padding-top:23px}
+.faceit-club-queue-name{display:flex;flex-direction:column;gap:9px}
+.faceit-club-queue-name small{font-size:9px;letter-spacing:.12em;color:#9b938b}
+.faceit-club-queue-name strong{font-size:clamp(20px,2.4vw,30px);letter-spacing:-.04em;color:#f3dfca;overflow-wrap:anywhere}
+.faceit-club-queue .faceit-club-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
+.faceit-club-queue .faceit-club-meta strong{overflow-wrap:anywhere}
+@media(max-width:520px){.faceit-club-queue .faceit-club-meta{grid-template-columns:1fr}}
