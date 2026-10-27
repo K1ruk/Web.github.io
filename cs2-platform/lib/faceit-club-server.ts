@@ -93,7 +93,7 @@ export async function inspectFaceitQueue() {
 
   type Check = {
     entityType: (typeof FACEIT_CLUB_ENTITY_TYPES)[number];
-    outcome: 'matched' | 'not_listed' | 'not_found' | 'access_denied' | 'temporarily_unavailable' | 'invalid_response';
+    outcome: 'matched' | 'not_listed' | 'not_found' | 'access_denied' | 'unsupported_filter' | 'temporarily_unavailable' | 'invalid_response';
   };
   const listingChecks: Check[] = [];
   let discovered: FaceitQueueDetails | null = null;
@@ -127,8 +127,9 @@ export async function inspectFaceitQueue() {
         if (error.code === 'invalid_key' || error.code === 'rate_limited') throw error;
         listingChecks.push({
           entityType,
-          outcome: error.code === 'permission_denied'
-            ? 'access_denied' : 'temporarily_unavailable',
+          outcome: error.code === 'permission_denied' ? 'access_denied'
+            : error.code === 'bad_request' ? 'unsupported_filter'
+            : 'temporarily_unavailable',
         });
       } else {
         listingChecks.push({ entityType, outcome: 'temporarily_unavailable' });
