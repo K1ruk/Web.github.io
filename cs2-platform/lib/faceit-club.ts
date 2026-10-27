@@ -1,4 +1,4 @@
-import { parseFaceitMetrics, type FaceitMetrics } from './faceit-metrics';
+import { parseFaceitMetrics, type FaceitMetrics } from './faceit-metrics.ts';
 
 export const NEXUS_FACEIT_CLUB_ID = 'a89ac9ff-8702-40df-b62d-8140719d481e';
 export const NEXUS_FACEIT_CLUB_URL =
