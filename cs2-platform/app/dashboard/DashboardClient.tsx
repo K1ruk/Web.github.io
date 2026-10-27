@@ -135,9 +135,9 @@ export function DashboardClient({
   const playerName = profileReady ? savedProfile!.nickname : displayName;
   const monogram = playerName.trim().slice(0, 2).toUpperCase() || 'NX';
   const rate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : null;
-  const tier = registrations.find(reg => reg.status === 'paid' && reg.assigned_tier !== null)?.assigned_tier;
   const activeTournament=tournamentSnapshots.find(snapshot=>snapshot.registrationStatus==='paid'
     && snapshot.eventStatus!=='finished')||tournamentSnapshots[0]||null;
+  const tier=activeTournament?.registrationStatus==='paid' ? activeTournament.tier : null;
 
   const achievements = [
     { id: 'verified', symbol: '✓', en: 'Steam Verified', mn: 'Steam баталгаажсан', descriptionEn: 'Connect your Steam account', descriptionMn: 'Steam хаягаа баталгаажуулах', unlocked: steamReady },
