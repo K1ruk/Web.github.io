@@ -56,7 +56,7 @@ export function PlayerTournamentStatus({ snapshot, demo = false, locale = 'en' }
     :state==='unconfirmed'
       ? 'You started an entry, but your place is not confirmed yet. Check the event registration page.'
       :state==='awaiting-tier'
-        ? 'Your registration is confirmed. Admins are reviewing your skill tier; you don't need to do anything yet.'
+        ? "Your registration is confirmed. Admins are reviewing your skill tier; you don\'t need to do anything yet."
         :state==='tier-approved'
           ? 'Your tier is approved. Team assignments stay private until the organizer publishes the rosters.'
           : 'Your official squad is live. Check your role, teammates and upcoming matches below.';
