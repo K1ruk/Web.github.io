@@ -420,3 +420,21 @@
 @media(max-width:980px){.lab-grid{grid-template-columns:1fr}.lab-aside{display:grid;grid-template-columns:1.1fr .9fr}.lab-header h1{font-size:clamp(56px,9vw,80px)}}
 @media(max-width:670px){.lab-page{padding-top:32px;padding-bottom:75px}.lab-header{margin:31px 0}.lab-header h1{font-size:clamp(45px,10vw,66px)}.lab-back{font-size:9px}.lab-grid{gap:14px}.lab-card{padding:21px}.lab-aside{display:flex}.lab-player-monogram{height:56px;width:56px;font-size:18px}.lab-player-info strong{font-size:18px}.lab-result-grid{gap:8px}.lab-result-metric strong{font-size:27px}.lab-faceit-heading h2{font-size:33px}}
 @media(prefers-reduced-motion:reduce){.lab-score-track span,.lab-run-button{transition:none}}
+
+
+/* Admin FACEIT evidence: review signals are not misconduct findings. */
+.admin-skill-actions{align-items:flex-start;gap:25px;flex-wrap:wrap}
+.admin-skill-actions>div:first-child{flex:1;min-width:240px}
+.admin-skill-actions .small-text{max-width:610px;margin:12px 0 0}
+.admin-batch-buttons{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:12px}
+.admin-evidence{margin-top:24px}
+.admin-evidence .details-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.admin-evidence .details-cell{min-width:0}
+.admin-evidence .details-cell small{line-height:1.65;font-size:10px}
+.admin-evidence .details-cell strong{font-size:clamp(17px,2vw,25px);overflow-wrap:anywhere}
+.admin-skill-warning{margin-top:20px;padding:18px 20px;background:linear-gradient(120deg,#f77a3c1b,#f77a3c08);border:1px solid #e1915975;border-radius:11px;color:#f0c0a2;font-size:12px;line-height:1.7}
+.admin-skill-warning>strong{font-size:10px;letter-spacing:.11em;color:#f5b388}
+.admin-review-flags{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.admin-review-flags>span{display:inline-block;background:#ae694428;border:1px solid #d8996855;border-radius:7px;padding:8px 10px;font-size:11px;color:#eec5aa}
+@media(max-width:920px){.admin-evidence .details-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:580px){.admin-batch-buttons{justify-content:flex-start}.admin-evidence .details-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
