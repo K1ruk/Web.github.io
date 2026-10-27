@@ -452,3 +452,27 @@
 .admin-assessment-label.review{color:#f3a68d;border-color:#e17a5075;background:#e17a5019}
 .admin-assessment-label.approved{color:#afcbb5;border-color:#87b29665;background:#88b69710}
 .admin-assessment-tier{display:block;font:10px ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:9px;color:#a6a09a}
+
+
+/* FACEIT multi-stat breakdown: consistent in the admin tier review and skill lab. */
+.faceit-breakdown{border-top:1px solid #ffffff24;margin-top:24px;padding-top:23px;min-width:0}
+.faceit-breakdown-header{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.faceit-breakdown-header strong{font-size:11px;letter-spacing:.13em;color:#e4d4c9}
+.faceit-breakdown-header span{font:9px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em;color:#a99588}
+.faceit-area-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:24px}
+.faceit-area{border:1px solid #ffffff21;background:#00000025;border-radius:10px;padding:15px 17px;display:flex;flex-direction:column;gap:9px;min-width:0}
+.faceit-area>span{font-size:10px;line-height:1.5;color:#a9a19b}
+.faceit-area>strong{font:650 22px ui-monospace,SFMono-Regular,Consolas,monospace;color:#e9a379;letter-spacing:-.05em}
+.faceit-area>strong small{font-size:11px;color:#8e8882}
+.faceit-area-bar{height:4px;background:#ffffff25;border-radius:5px;overflow:hidden}
+.faceit-area-bar i{display:block;height:100%;background:linear-gradient(90deg,#ad6739,#f2a774);border-radius:5px}
+.faceit-stats-table-wrap{width:100%;overflow-x:auto}
+.faceit-stats-table{width:100%;border-collapse:collapse;text-align:left;min-width:410px}
+.faceit-stats-table th{font-size:9px;letter-spacing:.09em;color:#a8a19b;padding:12px 9px;border-bottom:1px solid #ffffff28;white-space:nowrap}
+.faceit-stats-table td{border-bottom:1px solid #ffffff16;padding:11px 9px;font-size:11px;color:#ddd6cf;line-height:1.5}
+.faceit-stats-table td:first-child{color:#b6aaa2;max-width:250px}
+.faceit-stats-table td:not(:first-child){font:600 12px ui-monospace,SFMono-Regular,Consolas,monospace;white-space:nowrap}
+.faceit-stats-table td small{display:block;color:#88827e;font-size:9px;padding-top:3px}
+.faceit-breakdown-notice,.faceit-stats-unavailable{font-size:11px;color:#aaa09a;line-height:1.8;margin:18px 0 0}
+.faceit-stats-unavailable{border-top:1px solid #ffffff1d;padding-top:18px}
+@media(max-width:550px){.faceit-area-grid{gap:7px}.faceit-area{padding:12px}.faceit-area>strong{font-size:19px}.faceit-stats-table td,.faceit-stats-table th{padding:10px 7px}}
