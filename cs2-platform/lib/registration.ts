@@ -16,6 +16,26 @@ export type PublicTournament = {
   starts_at: string | null;
   registration_closes_at: string | null;
   confirmed: number;
+  /** Design-only fixture: NEVER eligible for checkout or database registration. */
+  demo?: boolean;
+};
+
+/**
+ * A visual-only example shown when NEXUS has no published events.
+ * No real tournament, teams, paid slots or schedule exist behind this card.
+ */
+export const BVG_FRIENDS_LEAGUE_DEMO: PublicTournament = {
+  id: 'demo-bvg-friends-league',
+  name: 'BVG - Friends League',
+  slug: 'bvg-friends-league',
+  status: 'demo',
+  currency: 'sek',
+  fee_cents: 0,
+  capacity: 50, // 10 planned squads × 5 players each
+  confirmed: 0,
+  starts_at: null,
+  registration_closes_at: null,
+  demo: true,
 };
 
 export type PlayerRegistration = {
@@ -38,7 +58,7 @@ export function profileIsReady(profile: PlayerProfile): boolean {
 export type EntryAvailability = 'open' | 'full' | 'closed' | 'scheduled';
 
 export function entryAvailability(event: PublicTournament, now: number): EntryAvailability {
-  if (event.status !== 'open') return 'closed';
+  if (event.demo || event.status !== 'open') return 'closed';
   if (event.starts_at && Date.parse(event.starts_at) <= now) return 'closed';
   if (event.registration_closes_at && Date.parse(event.registration_closes_at) <= now) return 'closed';
   // Only confirmed entries are public. Open payment holds are still verified
