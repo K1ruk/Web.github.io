@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getTournamentStage } from '@/lib/player-tournament-stage';
 
 export type PlayerTeammate = {
   nickname: string;
@@ -33,17 +34,9 @@ type Props = {
   locale?: 'en' | 'mn';
 };
 
-function stateOf(snapshot: PlayerTournamentSnapshot | null) {
-  if (!snapshot) return 'no-entry';
-  if (snapshot.registrationStatus !== 'paid') return 'unconfirmed';
-  if (snapshot.teamName && ['published', 'finished'].includes(snapshot.eventStatus)) return 'roster';
-  if (snapshot.tier !== null) return 'tier-approved';
-  return 'awaiting-tier';
-}
-
 export function PlayerTournamentStatus({ snapshot, demo = false, locale = 'en' }: Props) {
   const mn=locale==='mn';
-  const state=stateOf(snapshot);
+  const state=getTournamentStage(snapshot);
   const steps=[
     {label:mn?'Бүртгэл':'Registration',done:!!snapshot&&snapshot.registrationStatus==='paid'},
     {label:mn?'Түвшин':'Tier review',done:snapshot?.tier!==null&&snapshot?.tier!==undefined},
