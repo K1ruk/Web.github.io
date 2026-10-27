@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   NEXUS_FACEIT_CLUB_ID, NEXUS_FACEIT_CLUB_URL,
+  NEXUS_FACEIT_TEST_MATCH_ID, NEXUS_FACEIT_TEST_MATCH_URL,
   parseFaceitMatchId, summarizeFaceitMatch,
 } from '../lib/faceit-club.ts';
 
@@ -12,6 +13,15 @@ test('Club reference is the supplied FACEIT Club URL, not an assumed Hub ID', ()
   assert.equal(NEXUS_FACEIT_CLUB_ID, 'a89ac9ff-8702-40df-b62d-8140719d481e');
   assert.equal(NEXUS_FACEIT_CLUB_URL,
     'https://www.faceit.com/en/club/a89ac9ff-8702-40df-b62d-8140719d481e/parties');
+});
+
+
+test('the organizer-provided matchroom is a valid, well-formed CS2 FACEIT identifier', () => {
+  assert.equal(NEXUS_FACEIT_TEST_MATCH_ID, '1-1aaee7dd-bf23-44b6-b043-a96fc7586ce9');
+  assert.equal(NEXUS_FACEIT_TEST_MATCH_URL,
+    'https://www.faceit.com/en/cs2/room/1-1aaee7dd-bf23-44b6-b043-a96fc7586ce9');
+  assert.equal(parseFaceitMatchId(NEXUS_FACEIT_TEST_MATCH_URL), NEXUS_FACEIT_TEST_MATCH_ID);
+  assert.equal(parseFaceitMatchId(NEXUS_FACEIT_TEST_MATCH_ID), NEXUS_FACEIT_TEST_MATCH_ID);
 });
 
 test('normalizes only valid FACEIT matchroom IDs and exact first-party HTTPS URLs', () => {
