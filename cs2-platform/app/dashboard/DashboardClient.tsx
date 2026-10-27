@@ -17,7 +17,6 @@ type Registration = {
   id: string;
   status: string;
   assigned_tier: number | null;
-  internal_score: number | null;
   tournamentName: string;
   teamName: string | null;
 };
