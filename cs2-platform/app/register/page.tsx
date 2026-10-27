@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/auth';
 import { adminDb } from '@/lib/supabase/admin';
 import { RegistrationClient } from './RegistrationClient';
 import { BVG_FRIENDS_LEAGUE_DEMO, type PublicTournament } from '@/lib/registration';
+import { hasVerifiedDiscordProvider } from '@/lib/discord-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,7 +81,10 @@ export default async function Register() {
       }))
     : [BVG_FRIENDS_LEAGUE_DEMO];
 
+  // A local set of first-event rules can be used for free entries.
+  // Paid tournaments still require an explicitly published HTTPS rules URL.
   const rulesUrl = policyUrl(process.env.NEXT_PUBLIC_TOURNAMENT_RULES_URL);
+  const freeRulesUrl = rulesUrl || '/rules';
   const refundUrl = policyUrl(process.env.NEXT_PUBLIC_REFUND_POLICY_URL);
   const stripeKey = process.env.STRIPE_SECRET_KEY || '';
   const stripeEnabled = stripeKey.startsWith('sk_test_') ||
@@ -90,9 +94,11 @@ export default async function Register() {
     <RegistrationClient
       profile={profileResult.data}
       steamId={steamResult.data?.steam_id || null}
+      discordConnected={hasVerifiedDiscordProvider(user.app_metadata)}
       tournaments={tournaments}
       registrations={registrationsResult.data || []}
       rulesUrl={rulesUrl}
+      freeRulesUrl={freeRulesUrl}
       refundUrl={refundUrl}
       paymentsEnabled={stripeEnabled}
       now={Date.now()}
