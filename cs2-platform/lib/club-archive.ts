@@ -150,7 +150,7 @@ export function normalizeJuneClubMatch(
       map_count:rounds.length,
       team_a:teamNames[0]||null,team_b:teamNames[1]||null,
       score_a:scoreValues[0]??null,score_b:scoreValues[1]??null,
-      stats_status:rounds.length?'available':'unavailable',
+      stats_status:players.length>0?'available':'unavailable',
       model_version:CLUB_ARCHIVE_VERSION,
     },players,
   };
