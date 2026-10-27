@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeQueueHubMatches, FACEIT_HISTORY_MAX_AUTO_PAGES } from '../lib/faceit-hub-history.ts';
+import { normalizeQueueHubMatches, FACEIT_HISTORY_MAX_AUTO_PAGES, FACEIT_HISTORY_FULL_SCAN_PAGE_SIZE, juneArchiveSaveMode } from '../lib/faceit-hub-history.ts';
 import { NEXUS_FACEIT_QUEUE_ID, NEXUS_FACEIT_TEST_MATCH_ID } from '../lib/faceit-club.ts';
 
 const base = {
@@ -64,7 +64,9 @@ test('full API pages indicate that older history may exist, not a made-up total'
   assert.equal(result.nextOffset, 102);
   assert.equal(result.matches.length, 2);
   assert.equal(result.providerEnd, 102);
-  assert.equal(FACEIT_HISTORY_MAX_AUTO_PAGES, 100);
+  assert.equal(FACEIT_HISTORY_MAX_AUTO_PAGES, 200);
+  assert.equal(FACEIT_HISTORY_FULL_SCAN_PAGE_SIZE, 50);
+  assert.equal(FACEIT_HISTORY_MAX_AUTO_PAGES * FACEIT_HISTORY_FULL_SCAN_PAGE_SIZE, 10000);
 });
 
 test('valid empty page is not proof that the source has never held matches', () => {
@@ -105,4 +107,47 @@ test('missing provider competition metadata cannot be used to infer Club members
   ] }, 0, 50);
   assert.equal(result.matches.length, 0);
   assert.equal(result.rejectedUnverified, 3);
+});
+
+
+test('a failed later page cannot block saving earlier verified June matches', () => {
+  const status = juneArchiveSaveMode({
+    fullScanAttempted:true,status:'partial',
+    hasFetchedJuneMatches:true,more:true,
+  });
+  assert.equal(status,'partial');
+  assert.equal(juneArchiveSaveMode({
+    fullScanAttempted:true,status:'error',
+    hasFetchedJuneMatches:true,more:true,
+  }),'partial');
+});
+
+test('saving is blocked before a full scan, during the scan, or without June matches',()=>{
+  assert.equal(juneArchiveSaveMode({
+    fullScanAttempted:false,status:'partial',
+    hasFetchedJuneMatches:true,more:true,
+  }),'blocked'); // TEST FIRST 50 alone
+  assert.equal(juneArchiveSaveMode({
+    fullScanAttempted:true,status:'scanning',
+    hasFetchedJuneMatches:true,more:true,
+  }),'blocked');
+  assert.equal(juneArchiveSaveMode({
+    fullScanAttempted:true,status:'error',
+    hasFetchedJuneMatches:false,more:true,
+  }),'blocked');
+  assert.equal(juneArchiveSaveMode({
+    fullScanAttempted:true,status:'unavailable',
+    hasFetchedJuneMatches:true,more:false,
+  }),'blocked');
+});
+
+test('complete archive is enabled only after server-side pagination returns end',()=>{
+  assert.equal(juneArchiveSaveMode({
+    fullScanAttempted:true,status:'complete',
+    hasFetchedJuneMatches:true,more:false,
+  }),'complete');
+  assert.equal(juneArchiveSaveMode({
+    fullScanAttempted:true,status:'complete',
+    hasFetchedJuneMatches:true,more:true,
+  }),'blocked');
 });
