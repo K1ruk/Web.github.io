@@ -604,3 +604,9 @@
 .faceit-history-list>.outline-button{margin-top:16px}
 @media(max-width:770px){.faceit-history-status{grid-template-columns:repeat(2,minmax(0,1fr))}.faceit-history-actions>*{flex:1 1 190px}}
 @media(max-width:520px){.faceit-history-match-teams{gap:7px}.faceit-history-match-teams strong{font-size:11px}.faceit-history-match-teams span{font-size:15px}}
+
+
+/* Verified match-to-queue competition linkage (not FACEIT account ownership). */
+.faceit-club-unverified.faceit-club-verified{border-color:#8ab99575;background:#6a9e7515}
+.faceit-club-unverified.faceit-club-verified strong{color:#b3d5b8}
+.faceit-club-unverified.faceit-club-verified p{color:#bccbbd}
