@@ -3,156 +3,157 @@ import assert from 'node:assert/strict';
 import { parseFaceitMetrics, recentFaceitMetrics, lifetimeFaceitMetrics } from '../lib/faceit-metrics.ts';
 import { provisionalSkill } from '../lib/skill.ts';
 
-test('parses FACEIT real-world aggregate labels, preserving role-specific evidence', () => {
-  const metrics = parseFaceitMetrics({
-    'Average K/D Ratio': '1.15',
-    'Average K/R Ratio': '0.78',
-    ADR: '88.9',
-    'Average Assists': '6.1',
-    'Average Headshots %': '44',
-    'Win Rate %': '57',
-    'Entry Rate': '0.19',
-    'Entry Success Rate': '0.58',
-    'Utility Damage per Round': '8.2',
-    'Enemies Flashed per Round': '0.47',
-    '1v1 Win Rate': '0.53',
-    '1v2 Win Rate': '0.24',
-    'Sniper Kill Rate': '0.12',
+test('reads the four NEXUS signals from exact FACEIT-style values',()=>{
+  const m=parseFaceitMetrics({
+    ADR:'94.2','KAST %':'75.1','Opening Duel Win %':'59%', 'K/D Ratio':'1.29',
+    'Headshots %':'75','Win Rate %':'62'
   });
-  assert.equal(metrics.adr, 88.9);
-  assert.equal(metrics.assistsPerMatch, 6.1);
-  assert.equal(metrics.utilityDamagePerRound, 8.2);
-  assert.equal(metrics.enemiesFlashedPerRound, .47);
-  assert.equal(metrics.entrySuccessRate, .58);
-  assert.equal(metrics.clutch1v1Rate, .53);
-  assert.equal(metrics.headshotPercent, 44);
-  assert.equal(metrics.winRatePercent, 57);
-  assert.equal(metrics.sniperKillRate, .12);
+  assert.equal(m.adr,94.2);
+  assert.equal(m.kastPercent,75.1);
+  assert.equal(m.openingDuelWinPercent,59);
+  assert.equal(m.kd,1.29);
+  assert.deepEqual(Object.keys(m).sort(),['adr','kastPercent','kd','openingDuelWinPercent'].sort());
 });
 
-test('missing and invalid FACEIT advanced fields remain null, never zero or fabricated', () => {
-  const result = parseFaceitMetrics({
-    'K/D Ratio': '',
-    ADR: 'not tracked',
-    'Entry Success Rate': '1.7',
-    '1v1 Win Rate': '-1',
-    'Average K/R Ratio': '165.18', // often a different aggregate in other fields
-    'Win Rate %': '54',
-  });
-  assert.equal(result.kd, null);
-  assert.equal(result.adr, null);
-  assert.equal(result.entrySuccessRate, null);
-  assert.equal(result.clutch1v1Rate, null);
-  assert.equal(result.killsPerRound, null);
-  assert.equal(result.winRatePercent, 54);
+test('does not mix duel counts with opening win percentages',()=>{
+  const m=parseFaceitMetrics({'Opening Duels Won':'8','Opening Duels Lost':'12'});
+  assert.equal(m.openingDuelWinPercent,40);
+  assert.notEqual(m.openingDuelWinPercent,8);
 });
 
-test('recent average counts only matches exposing each exact statistic', () => {
-  const recent = recentFaceitMetrics([
-    { stats: { 'K/D Ratio': '1.40', ADR: '100', Assists: '6', 'Entry Success Rate': '65%' } },
-    { stats: { 'K/D Ratio': '1.00', Assists: '8', 'Enemies Flashed per Round': '0.5' } },
-    { stats: {} },
+test('first-kill and first-death counts only derive opening success when both exist',()=>{
+  assert.equal(parseFaceitMetrics({'First Kills':'5','First Deaths':'5'}).openingDuelWinPercent,50);
+  assert.equal(parseFaceitMetrics({'First Kills':'5'}).openingDuelWinPercent,null);
+  assert.equal(parseFaceitMetrics({'Kills':'30','Deaths':'10'}).openingDuelWinPercent,null);
+  assert.equal(parseFaceitMetrics({'Opening Duels Won':'0','Opening Duels Lost':'0'}).openingDuelWinPercent,null);
+});
+
+test('parses fractional KAST and entry rates consistently as 0–100 percentages',()=>{
+  const m=parseFaceitMetrics({'KAST':0.748,'Opening Duel Win Rate':0.58});
+  assert.equal(m.kastPercent,74.8);
+  assert.equal(m.openingDuelWinPercent,58);
+  assert.equal(parseFaceitMetrics({'KAST %':'76.3%'}).kastPercent,76.3);
+  assert.equal(parseFaceitMetrics({'Entry Success Rate':'0.65'}).openingDuelWinPercent,65);
+});
+
+test('unavailable and malformed signals stay null, never zero',()=>{
+  const m=parseFaceitMetrics({
+    ADR:'not recorded',
+    KAST:'',
+    'Opening Duel Win %':'103%',
+    'Average K/D Ratio':'',
+  });
+  assert.deepEqual(Object.values(m),[null,null,null,null]);
+  assert.equal(parseFaceitMetrics(null).kastPercent,null);
+  assert.equal(parseFaceitMetrics({'KAST %':'-10%'}).kastPercent,null);
+});
+
+test('recent averages track the coverage of each stat rather than invent full 30 matches',()=>{
+  const result=recentFaceitMetrics([
+    {stats:{ADR:'95',KAST:'72','Opening Duel Win %':'54', 'K/D Ratio':'1.2'}},
+    {stats:{ADR:'85',KAST:'78','Opening Duel Win %':'62', 'K/D Ratio':'1.4'}},
+    {stats:{'K/D Ratio':'1.3'}},
+    {stats:{}},
   ]);
-  assert.equal(recent.metrics.kd, 1.2);
-  assert.equal(recent.metrics.adr, 100);
-  assert.equal(recent.metrics.assistsPerMatch, 7);
-  assert.equal(recent.metrics.entrySuccessRate, .65);
-  assert.equal(recent.counts.adr, 1);
-  assert.equal(recent.counts.assistsPerMatch, 2);
-  assert.equal(recent.counts.enemiesFlashedPerRound, 1);
-  assert.equal(recent.matches, 2);
+  assert.equal(result.metrics.adr,90);
+  assert.equal(result.metrics.kastPercent,75);
+  assert.equal(result.metrics.openingDuelWinPercent,58);
+  assert.equal(result.metrics.kd,1.3);
+  assert.equal(result.counts.kastPercent,2);
+  assert.equal(result.counts.kd,3);
+  assert.equal(result.matches,3);
 });
 
-test('lifetime coverage is distinct from recent match samples', () => {
-  const result = lifetimeFaceitMetrics({
-    Matches: '151',
-    'Average K/D Ratio': '1.24',
-    ADR: '91.20',
-    'Average Assists': '5.8',
-  });
-  assert.equal(result.matches, 151);
-  assert.equal(result.metrics.adr, 91.2);
-  assert.equal(result.metrics.assistsPerMatch, 5.8);
-  assert.equal(lifetimeFaceitMetrics(null).matches, null);
+test('opening win rate is weighted by actual duel attempts when all rows have counts',()=>{
+  const result=recentFaceitMetrics([
+    {stats:{'Opening Kills':'7','Opening Deaths':'3'}},
+    {stats:{'Opening Kills':'1','Opening Deaths':'9'}},
+  ]);
+  assert.equal(result.metrics.openingDuelWinPercent,40);
+  assert.equal(result.openingDuels,20);
+  assert.equal(result.counts.openingDuelWinPercent,2);
 });
 
-test('a strong support player earns some positive evidence even without high K/D', () => {
-  const standard = provisionalSkill(1850, .83, 30);
-  const support = provisionalSkill(1850, .83, 30, {
-    recentMetrics: {
-      assistsPerMatch: 7.4,
-      utilityDamagePerRound: 9,
-      enemiesFlashedPerRound: .53,
-      kd: .83,
-      adr: 68,
-    },
+test('lifetime aggregates do not become recent match samples',()=>{
+  const result=lifetimeFaceitMetrics({
+    Matches:'145','Average K/D Ratio':'1.11',
+    'Average ADR':'89.8','Average KAST %':'73.3',
+    'Opening Duel Success Rate':'57',
   });
-  assert.ok(support.performanceAreas.teamplay > 1.5);
-  assert.ok(support.score > standard.score);
-  assert.ok(support.performanceBonus <= 7.5);
+  assert.equal(result.matches,145);
+  assert.equal(result.metrics.adr,89.8);
+  assert.equal(result.metrics.kastPercent,73.3);
+  assert.equal(result.metrics.openingDuelWinPercent,57);
+  assert.equal(lifetimeFaceitMetrics(null).matches,null);
 });
 
-test('strong entry and clutch stats help without relying on headshots or sniper percentage', () => {
-  const ordinary = provisionalSkill(2000, 1.0, 25);
-  const entry = provisionalSkill(2000, 1.0, 25, {
-    recentMetrics: { entryRate: .22, entrySuccessRate: .68, clutch1v1Rate: .60 },
+test('the four signal model rewards good measured impact but never punishes weak recent games',()=>{
+  const base=provisionalSkill(1850,null,30);
+  const high=provisionalSkill(1850,1.35,30,{
+    recentMetrics:{adr:102,kastPercent:79,openingDuelWinPercent:64,kd:1.35},
+    recentMetricSamples:{adr:30,kastPercent:30,openingDuelWinPercent:30,kd:30},
   });
-  assert.ok(entry.performanceAreas.opening > .2);
-  assert.ok(entry.performanceAreas.clutch > 0);
-  assert.ok(entry.score > ordinary.score);
+  assert.equal(high.model,'core-four-v4');
+  assert.ok(high.performanceBonus>4);
+  assert.ok(high.performanceBonus<=7.5);
+  assert.ok(high.score>base.score);
+  assert.equal(high.performanceSource,'recent');
+  assert.equal(high.confidence,'recent-data');
+  assert.ok(high.performanceAreas.adr>0);
+  assert.ok(high.performanceAreas.kast>0);
+  assert.ok(high.performanceAreas.opening>0);
+  assert.ok(high.performanceAreas.kd>0);
 });
 
-test('low and missing secondary metrics cannot push an Elo suggestion downward', () => {
-  const baseline = provisionalSkill(2400, null, 30);
-  const cold = provisionalSkill(2400, .2, 30, {
-    recentMetrics: {
-      adr: 20, killsPerRound: .1, assistsPerMatch: 0,
-      entrySuccessRate: .1, clutch1v1Rate: .05,
-    },
+test('KAST without enough data is not used for a bonus',()=>{
+  const baseline=provisionalSkill(1850,null,30);
+  const candidate=provisionalSkill(1850,null,30,{
+    recentMetrics:{kastPercent:95,adr:130,openingDuelWinPercent:82},
+    recentMetricSamples:{kastPercent:2,adr:1,openingDuelWinPercent:3},
   });
-  assert.equal(cold.score, baseline.score);
-  assert.equal(cold.performanceBonus, 0);
+  assert.equal(candidate.score,baseline.score);
+  assert.equal(candidate.performanceBonus,0);
+  assert.equal(candidate.confidence,'elo-only');
 });
 
-test('lifetime support performance protects against a short bad streak', () => {
-  const base = provisionalSkill(1700, .2, 30, {
-    lifetimeMatches: 150,
-    lifetimeKd: 1,
-    lifetimeMetrics: {
-      assistsPerMatch: 7.9,
-      enemiesFlashedPerRound: .58,
-      utilityDamagePerRound: 10,
-    },
+test('low K/D cannot outweigh good KAST/ADR; no negative score adjustment',()=>{
+  const base=provisionalSkill(2000,0.4,30);
+  const impact=provisionalSkill(2000,0.4,30,{
+    recentMetrics:{adr:103,kastPercent:80,openingDuelWinPercent:50,kd:0.4},
   });
-  assert.equal(base.performanceSource, 'lifetime');
-  assert.ok(base.performanceAreas.teamplay > 0);
+  assert.ok(impact.score>base.score);
+  assert.equal(impact.performanceAreas.kd,0);
 });
 
-test('advanced metrics with fewer than ten usable match samples cannot inflate ratings', () => {
-  const inflated = provisionalSkill(1600, 1.2, 30, {
-    recentMetrics: { adr: 240, utilityDamagePerRound: 50, entrySuccessRate: .9 },
-    recentMetricSamples: { kd: 30, adr: 2, utilityDamagePerRound: 2, entrySuccessRate: 1 },
+test('strong lifetime KAST/ADR can survive a poor recent streak',()=>{
+  const base=provisionalSkill(2150,.6,30,{
+    lifetimeMatches:130,
+    lifetimeKd:1.23,
+    lifetimeMetrics:{adr:94,kastPercent:78,openingDuelWinPercent:63,kd:1.23},
   });
-  const baseline = provisionalSkill(1600, 1.2, 30);
-  assert.equal(inflated.score, baseline.score);
-  assert.equal(inflated.performanceAreas.opening, 0);
+  assert.equal(base.performanceSource,'lifetime');
+  assert.ok(base.performanceAreas.kast>0);
+  assert.ok(base.performanceBonus>0);
 });
 
-test('headshot and AWP usage never penalize AWPers relative to riflers', () => {
-  const awper = provisionalSkill(2000, 1.1, 25, {
-    recentMetrics: { adr: 85, headshotPercent: 14, sniperKillRate: .65 },
+test('strong KAST or opening percentage with low Elo asks for review, not punishment',()=>{
+  const result=provisionalSkill(1350,1.1,30,{
+    recentMetrics:{kastPercent:82,openingDuelWinPercent:71,adr:96},
+    recentMetricSamples:{kastPercent:25,openingDuelWinPercent:25,adr:25,kd:25},
   });
-  const rifler = provisionalSkill(2000, 1.1, 25, {
-    recentMetrics: { adr: 85, headshotPercent: 70, sniperKillRate: 0 },
-  });
-  assert.equal(awper.score, rifler.score);
+  assert.ok(result.reviewFlags.includes('kast_elo_mismatch'));
+  assert.ok(result.reviewFlags.includes('opening_elo_mismatch'));
+  assert.ok(result.reviewFlags.includes('damage_elo_mismatch'));
+  assert.equal(result.reviewRequired,true);
+  assert.ok(result.score>=provisionalSkill(1350,1.1,30).score);
 });
 
-test('high recent ADR but lower FACEIT Elo requests manual review, not a penalty', () => {
-  const stats = provisionalSkill(1500, .92, 25, {
-    recentMetrics: { adr: 103 },
-    recentMetricSamples: { adr: 25, kd: 25 },
+test('missing opening and KAST do not turn 0 into a meaningful performance reading',()=>{
+  const result=provisionalSkill(2200,1.07,30,{
+    recentMetrics:{adr:82,kastPercent:null,openingDuelWinPercent:null,kd:1.07},
+    recentMetricSamples:{adr:30,kastPercent:0,openingDuelWinPercent:0,kd:30},
   });
-  assert.ok(stats.reviewFlags.includes('damage_elo_mismatch'));
-  assert.ok(stats.score >= provisionalSkill(1500, .92, 25).score);
+  assert.equal(result.performanceAreas.kast,0);
+  assert.equal(result.performanceAreas.opening,0);
+  assert.equal(result.confidence,'limited');
 });
