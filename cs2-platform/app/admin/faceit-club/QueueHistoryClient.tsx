@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { ClubArchiveClient } from './ClubArchiveClient';
+import { CLUB_ARCHIVE_SINCE_SECONDS } from '@/lib/club-archive';
 import type { QueueHistoryMatch } from '@/lib/faceit-hub-history';
 import { FACEIT_HISTORY_MAX_AUTO_PAGES, FACEIT_HISTORY_FULL_SCAN_PAGE_SIZE } from '@/lib/faceit-hub-history';
 
@@ -55,6 +57,9 @@ export function QueueHistoryClient({
   const [visible, setVisible] = useState(50);
 
   const busy = status === 'checking' || status === 'scanning';
+  const juneMatches = matches.filter(m=>m.finishedAt!==null
+    &&m.finishedAt>=CLUB_ARCHIVE_SINCE_SECONDS
+    &&m.finishedAt<=Math.floor(Date.now()/1000)+3600);
 
   async function getPage(offset: number, limit: number): Promise<HistoryPage> {
     const response = await fetch('/api/admin/faceit-club/history?offset=' + offset + '&limit=' + limit, {
@@ -169,10 +174,10 @@ export function QueueHistoryClient({
   }
 
   function saveCsv() {
-    if (!matches.length) return;
+    if (!juneMatches.length) return;
     const header = ['Match ID', 'Status', 'Finished UTC', 'Competition ID', 'Organizer ID',
       'Team A', 'Team B', 'Score A', 'Score B', 'Matchroom URL'];
-    const rows = matches.map(match => [
+    const rows = juneMatches.map(match => [
       match.matchId,
       match.status,
       match.finishedAt ? new Date(match.finishedAt * 1000).toISOString() : '',
@@ -189,7 +194,7 @@ export function QueueHistoryClient({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'nexus-faceit-queue-' + queueId + '-matches.csv';
+    link.download = 'nexus-faceit-queue-' + queueId + '-june-2026-onward.csv';
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -222,7 +227,7 @@ export function QueueHistoryClient({
       {status === 'scanning' && <button className="outline-button" type="button" onClick={() => { cancelRef.current = true; }}>
         {mn ? 'ЗОГСООХ' : 'STOP AFTER THIS PAGE'}
       </button>}
-      {!!matches.length && !busy && <button className="outline-button" type="button" onClick={saveCsv}>
+      {!!juneMatches.length && !busy && <button className="outline-button" type="button" onClick={saveCsv}>
         {mn ? 'CSV ФАЙЛ ТАТАХ' : 'EXPORT CSV'}
       </button>}
     </div>
@@ -237,18 +242,21 @@ export function QueueHistoryClient({
       <div><small>REJECTED / WRONG SCOPE</small><strong>{discarded}</strong></div>
       <div><small>SUPPLIED MATCH FOUND</small><strong>{knownSampleLocated ? 'YES' : 'NOT YET'}</strong></div>
     </div>}
+    {matches.length>0 && <p className="faceit-club-note">
+      June 1, 2026 onward: {juneMatches.length} matches. Earlier or undated matches excluded: {matches.length-juneMatches.length}.
+    </p>}
     {message && <div className={'faceit-history-message' + (status === 'error' || status === 'unavailable' ? ' caution' : '')} role="status">
       {message}
     </div>}
     {status === 'scanning' && <p className="faceit-club-note">
       {mn ? 'Скан үргэлжилж байна — табыг нээлттэй байлгана уу.' : 'Scanning while this tab is open. You can stop after the current page.'}
     </p>}
-    {matches.length > 0 && <div className="faceit-history-list">
+    {juneMatches.length > 0 && <div className="faceit-history-list">
       <div className="faceit-history-list-title">
         <strong>{mn ? 'FACEIT-ЭЭС БАТАЛГААЖСАН ТОГЛОЛТУУД' : 'MATCHES MATCHING THIS COMPETITION'}</strong>
-        <span>{mn ? 'ХАРУУЛЖ БАЙГАА' : 'SHOWING'} {Math.min(visible,matches.length)} / {matches.length}</span>
+        <span>{mn ? 'ХАРУУЛЖ БАЙГАА' : 'SHOWING'} {Math.min(visible,juneMatches.length)} / {juneMatches.length}</span>
       </div>
-      {matches.slice(0,visible).map(match => <div className="faceit-history-match" key={match.matchId}>
+      {juneMatches.slice(0,visible).map(match => <div className="faceit-history-match" key={match.matchId}>
         <div className="faceit-history-match-meta">
           <span>{match.status}</span>
           <small>{match.finishedAt ? new Date(match.finishedAt * 1000).toLocaleString() : 'DATE UNAVAILABLE'}</small>
@@ -264,9 +272,15 @@ export function QueueHistoryClient({
           {mn ? 'FACEIT MATCHROOM' : 'VIEW MATCH / PLAYER STATS'} ↗
         </a>
       </div>)}
-      {visible < matches.length && <button type="button" className="outline-button" onClick={() => setVisible(x=>x+50)}>
+      {visible < juneMatches.length && <button type="button" className="outline-button" onClick={() => setVisible(x=>x+50)}>
         {mn ? 'ДАРААГИЙН 50-Г ХАРАХ' : 'SHOW 50 MORE'}
       </button>}
     </div>}
+    <ClubArchiveClient
+      matches={juneMatches}
+      historyComplete={status==='complete' && !more}
+      locale={locale}
+      apiConfigured={apiConfigured}
+    />
   </section>;
 }
