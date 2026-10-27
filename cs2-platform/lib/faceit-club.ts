@@ -4,6 +4,11 @@ export const NEXUS_FACEIT_CLUB_ID = 'a89ac9ff-8702-40df-b62d-8140719d481e';
 export const NEXUS_FACEIT_CLUB_URL =
   'https://www.faceit.com/en/club/' + NEXUS_FACEIT_CLUB_ID + '/parties';
 
+/** Matchroom provided by the Club organizer for diagnostics; provenance not yet confirmed. */
+export const NEXUS_FACEIT_TEST_MATCH_ID = '1-1aaee7dd-bf23-44b6-b043-a96fc7586ce9';
+export const NEXUS_FACEIT_TEST_MATCH_URL =
+  'https://www.faceit.com/en/cs2/room/' + NEXUS_FACEIT_TEST_MATCH_ID;
+
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const MATCH_ID = new RegExp('^(?:1-)?' + UUID + '$', 'i');
 
