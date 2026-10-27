@@ -100,18 +100,33 @@ NEXUS has a reference to the supplied Club page:
 - Queue ID: `26ca1fb5-eb37-4b3c-9005-402eca7a9008` (provided by the queue owner)
 - Admin diagnostic page: `/admin/faceit-club`
 
-**Owner-only queue permissions check:** The owner can click
-**CHECK OWNER QUEUE API ACCESS** at `/admin/faceit-club`. NEXUS makes
+**Read-only queue API diagnosis:** The owner can click
+**CHECK OWNER QUEUE API ACCESS** at `/admin/faceit-club`. NEXUS calls
 `GET /games/cs2/queues/26ca1fb5-eb37-4b3c-9005-402eca7a9008`
-using the private server-side `FACEIT_API_KEY`. A 200 response must carry
-the **exact configured queue ID** and `game=cs2`. The UI shows the provider
-queue name, organizer ID, entity ID/type, region, and status. This tests
-whether the **developer API key** has organizer-restricted access; it is not
-FACEIT account sign-in and does not establish that the signed-in NEXUS user
-has been verified by FACEIT as owner. A 403 may mean the developer key
-lacks special organizer permissions even when the human is the queue owner.
-The UI provides a clear permissions error instead of treating this as an
-invalid player or inventing results. This action makes no database writes.
+with the private server-side `FACEIT_API_KEY`. FACEIT documents this route
+for developers/organizers. The result is interpreted precisely:
+
+- **200 + exact queue ID and `game=cs2`:** API key can read this queue's
+  details (not proof of FACEIT account ownership).
+- **403:** the key is denied access to this protected endpoint, which is
+  different from the human's status as Club/queue owner.
+- **404:** **inconclusive**. This is not proof of insufficient permissions,
+  a nonexistent queue, or a mistaken Club link. As a bounded read-only
+  fallback, NEXUS tries the documented filtered list endpoint
+  `GET /games/cs2/queues?entity_type=<candidate>&entity_id=<the-Club-ID>`
+  with plausible `clan`, `club`, and `hub` entity types. It only accepts
+  an item with the **exact** supplied queue ID, `game=cs2`, and the exact
+  supplied Club entity ID. FACEIT does not document which entity type
+  applies to newer Club queues, so these attempts are exploratory, not
+  definitive. If still not found, NEXUS inspects the **one** matchroom
+  provided by the organizer to show its competition ID, type, and organizer
+  as independent context; this does not establish queue membership.
+- **401/429:** the API key was rejected or rate-limited. These remain
+  explicit errors, not a false empty match history.
+
+The diagnostics don't fetch all Club queues, authenticate the FACEIT owner,
+or write registrations/results to Supabase. They use the documented Data API
+only; they don't scrape private Club endpoints.
 
 The public Data API currently does **not document a queue-specific match
 history listing**. The official FACEIT Club admin interface **does** show
