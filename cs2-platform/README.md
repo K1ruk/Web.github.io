@@ -90,6 +90,40 @@ Create a server-side FACEIT Data API key at https://developers.faceit.com/ (see 
 
 **Payment confirmation occurs only after verified Stripe webhooks.** Returning to the success page never marks a player paid.
 
+## FACEIT Club reference and match diagnostics
+
+NEXUS has a reference to the supplied Club page:
+
+- Club: `https://www.faceit.com/en/club/a89ac9ff-8702-40df-b62d-8140719d481e/parties`
+- Identifier: `a89ac9ff-8702-40df-b62d-8140719d481e`
+- Admin diagnostic page: `/admin/faceit-club`
+
+**Current integration: read-only, match-by-match.** A NEXUS administrator may
+paste a FACEIT CS2 matchroom URL, such as
+`https://www.faceit.com/en/cs2/room/1-<match-uuid>`. The server validates the
+match ID, requests official FACEIT Data API `GET /matches/{match_id}` and
+`GET /matches/{match_id}/stats` with the existing private `FACEIT_API_KEY`,
+and shows the actual match result and available player metrics (ADR, KAST,
+opening duel win %, K/D, kills, deaths). Missing values display `—`; nothing
+is fabricated or deduced from unrelated fields. The endpoint is restricted
+to verified NEXUS administrators and always returns `no-store` responses.
+
+**Important limits:** This Club ID is *not* assumed to be an old FACEIT Hub ID
+or competition ID. Public FACEIT Data API documentation currently exposes
+Hub, tournament, and match endpoints, but does not document a method for
+enumerating all matches in a Club by Club ID. A public matchroom alone does
+not prove association with the supplied Club. The inspector explicitly
+labels Club membership **unverified** and never writes an imported result,
+tournament standing or player rating to NEXUS. Actual Club-to-match
+discovery, ownership verification and automated synchronization require
+additional verified provider support or organizer-provided competition
+details. Never scrape authenticated Club pages as an undocumented API.
+
+To test with real data: configure the server-side FACEIT key, open the FACEIT
+Club's `Club Queues → MATCHES` section, copy a completed CS2 matchroom link
+and inspect it via the new NEXUS admin page. Keep match identifiers separate
+from the NEXUS paid-tournament roster until their provenance is confirmed.
+
 ## Admin FACEIT assessment and fair-play review (core four v4 — provisional)
 
 One server-side `FACEIT_API_KEY` belongs to **NEXUS**; players supply no API
