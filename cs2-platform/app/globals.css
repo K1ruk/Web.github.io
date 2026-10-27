@@ -438,3 +438,10 @@
 .admin-review-flags>span{display:inline-block;background:#ae694428;border:1px solid #d8996855;border-radius:7px;padding:8px 10px;font-size:11px;color:#eec5aa}
 @media(max-width:920px){.admin-evidence .details-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:580px){.admin-batch-buttons{justify-content:flex-start}.admin-evidence .details-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Skill Lab / fair-play evidence messages */
+.lab-protection-note{font-size:12px;color:#b6b0a9;line-height:1.8;margin:23px 0 8px;padding:17px 19px;border:1px solid #ffffff20;border-radius:10px;background:#ffffff05}
+.lab-review-alert{margin-top:20px;padding:19px 20px;border:1px solid #e49b6375;border-radius:11px;background:#e78c4217}
+.lab-review-alert strong{font-size:10px;letter-spacing:.11em;color:#f3b88d}
+.lab-review-alert p{font-size:12px;color:#e3bb9b;line-height:1.6;margin:11px 0 0}
