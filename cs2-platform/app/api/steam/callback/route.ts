@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth';
-import { adminDb } from '@/lib/supabase/admin';
+import { adminDb, adminRequestFailure } from '@/lib/supabase/admin';
 import { siteUrl } from '@/lib/env';
 import { equalNonce, steamSiteOrigin, verifyOpenId } from '@/lib/steam';
 
-type LinkResult = 'session' | 'state' | 'locked' | 'duplicate' | 'verification' | 'setup' | 'origin' | 'service';
+type LinkResult = 'session' | 'state' | 'locked' | 'duplicate' | 'verification' | 'credentials' | 'setup' | 'origin' | 'service';
 
 export async function GET(request: NextRequest) {
   let origin: string;
@@ -42,14 +42,20 @@ export async function GET(request: NextRequest) {
       throw new Error('Steam linking server is not configured');
     }
 
-    const db = adminDb();
+    let db: ReturnType<typeof adminDb>;
+    try {
+      db = adminDb();
+    } catch {
+      problem = 'credentials';
+      throw new Error('Privileged Supabase client is unavailable');
+    }
     const { data: ongoing, error: lookupError } = await db.from('registrations')
       .select('id')
       .eq('user_id', user.id)
       .in('status', ['paid', 'pending_payment'])
       .limit(1);
     if (lookupError) {
-      problem = 'service';
+      problem = adminRequestFailure(lookupError);
       throw new Error('Could not check Steam account lock');
     }
     if (ongoing?.length) {
@@ -73,7 +79,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       // A Steam account may be linked to only one NEXUS account.
-      problem = error.code === '23505' ? 'duplicate' : 'service';
+      problem = error.code === '23505' ? 'duplicate' : adminRequestFailure(error);
       throw new Error('Could not store verified Steam account');
     }
 
