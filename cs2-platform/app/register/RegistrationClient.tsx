@@ -85,7 +85,7 @@ export function RegistrationClient({
   if (!event) blocker = mn ? 'Одоогоор нээлттэй тэмцээн байхгүй.' : 'No tournaments have been announced yet.';
   else if (event.demo) blocker = mn ? 'Энэ нь зөвхөн загвар. Бодит бүртгэл, төлбөр авахгүй.' : 'Preview only — no registration or payment will be taken.';
   else if (alreadyPaid) blocker = mn ? 'Та энэ тэмцээнд бүртгүүлсэн.' : 'You already have a confirmed place in this event.';
-  else if (availability === 'full') blocker = mn ? 'Энэ тэмцээний суудал дүүрсэн.' : 'All confirmed places are taken.';
+  else if (availability === 'full') blocker = mn ? 'Энэ тэмцээний бүх слот дүүрсэн.' : 'All confirmed places are taken.';
   else if (availability !== 'open') blocker = mn ? 'Энэ тэмцээний бүртгэл хаагдсан.' : 'Registration is not open for this event.';
   else if (!steamReady) blocker = mn ? 'Эхлээд Steam хаягаа баталгаажуулна уу.' : 'Connect your Steam account before entering.';
   else if (!playerReady) blocker = mn ? 'Тоглогчийн профайлаа бүрэн бөглөнө үү.' : 'Complete your nickname and preferred roles in My Account.';
@@ -197,8 +197,8 @@ export function RegistrationClient({
                       ? (mn ? 'ЭХЛЭХ · ' : 'STARTS · ') + readableDate(item.starts_at, locale)
                       : (mn ? 'ЭХЛЭХ ӨДӨР ТОВЛООГҮЙ' : 'DATE TO BE ANNOUNCED')}</span>
                     <span className="entry-event-card-bottom">
-                      <span><small>{mn ? 'ОРОЛЦОХ ХУРААМЖ' : 'ENTRY FEE'}</small><b>{item.demo ? (mn ? 'ТОВЛООГҮЙ' : 'TBA') : displayFee(item.fee_cents, item.currency, locale)}</b></span>
-                      <span><small>{mn ? 'БАТАЛГААЖСАН ТОГЛОГЧ' : 'CONFIRMED PLAYERS'}</small><b>{item.demo ? '10 ' : item.confirmed} <em>{item.demo ? (mn ? 'БАГ · 50 БАЙР' : 'TEAMS · 50 SLOTS') : '/ ' + item.capacity}</em></b></span>
+                      <span><small>{mn ? 'ТЭМЦЭЭНИЙ ХУРААМЖ' : 'ENTRY FEE'}</small><b>{item.demo ? (mn ? 'ТОВЛООГҮЙ' : 'TBA') : displayFee(item.fee_cents, item.currency, locale)}</b></span>
+                      <span><small>{mn ? 'БАТАЛГААЖСАН СЛОТ' : 'CONFIRMED PLAYERS'}</small><b>{item.demo ? '10 ' : item.confirmed} <em>{item.demo ? (mn ? 'БАГ · 50 СЛОТ' : 'TEAMS · 50 SLOTS') : '/ ' + item.capacity}</em></b></span>
                       <span className="entry-card-select" aria-hidden="true">{chosen ? '✓' : '↗'}</span>
                     </span>
                     {confirmedEntry(eventRegistration) && <span className="entry-event-registered">{mn ? 'ТА БҮРТГҮҮЛСЭН' : 'YOUR ENTRY IS CONFIRMED'}</span>}
